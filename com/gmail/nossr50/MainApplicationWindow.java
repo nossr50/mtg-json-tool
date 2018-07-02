@@ -18,6 +18,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 
 import com.gmail.nossr50.enums.AppState;
+import com.gmail.nossr50.enums.ButtonType;
+import com.gmail.nossr50.enums.FieldType;
 import com.gmail.nossr50.runnables.ExportThread;
 import com.gmail.nossr50.runnables.QueryThread;
 
@@ -67,13 +69,45 @@ public class MainApplicationWindow {
     
     private static Button filter_btn_fetch;
     private static Button rt_btn_export;
-    private Text ft_supertypes;
+    private static Button filter_btn_clear;
+    
+    private Button fset_add;
+    private Button fset_set;
+    private Button ftypes_add;
+    private Button ftypes_set;
+    private Button fsuperTypes_add;
+    private Button fsuperTypes_set;
+    private Button fsubTypes_add;
+    private Button fsubTypes_set;
+    private Button frarity_set;
+    
+    private Text ft_superTypes;
     private Text rt_supertypes;
     
     private static List resultList;
     
     private Listener listener_fetch;
     private Listener listener_export;
+    private Listener listener_clear;
+    
+    /*
+    private Listener listener_drop_set;
+    private Listener listener_drop_types;
+    private Listener listener_drop_superTypes;
+    private Listener listener_drop_subTypes;
+    private Listener listener_drop_examples;
+    */
+    
+    private Listener listener_drop_set_add;
+    private Listener listener_drop_set_set;
+    private Listener listener_drop_types_add;
+    private Listener listener_drop_types_set;
+    private Listener listener_drop_superTypes_add;
+    private Listener listener_drop_superTypes_set;
+    private Listener listener_drop_subTypes_add;
+    private Listener listener_drop_subTypes_set;
+    //private Listener listener_drop_rarity_add;
+    private Listener listener_drop_rarity_set;
     
     public static ArrayList<Card> results;
     public static AppState curState = AppState.IDLE;
@@ -82,6 +116,9 @@ public class MainApplicationWindow {
     
     private Combo fdrop_set;
     private Combo fdrop_types;
+    private Combo fdrop_superTypes;
+    private Combo fdrop_subTypes;
+    private Combo fdrop_rarity;
 
     /**
      * Launch the application.
@@ -224,46 +261,99 @@ public class MainApplicationWindow {
         filter_lbl_header_specific.setText("Specific");
         
         filter_btn_fetch = new Button(filterComp, SWT.NONE);
-        filter_btn_fetch.setBounds(1, 626, 136, 25);
+        filter_btn_fetch.setBounds(357, 306, 136, 25);
         filter_btn_fetch.setText("Fetch Results");
         
         Label filter_lbl_header_note1 = new Label(filterComp, SWT.NONE);
-        filter_lbl_header_note1.setBounds(1, 610, 322, 15);
+        filter_lbl_header_note1.setBounds(417, 287, 322, 15);
         filter_lbl_header_note1.setText("Note: Fields can be blank!");
         
         Label filter_lbl_supertypes = new Label(filterComp, SWT.NONE);
         filter_lbl_supertypes.setText("Supertypes");
         filter_lbl_supertypes.setBounds(10, 191, 66, 15);
         
-        ft_supertypes = new Text(filterComp, SWT.BORDER);
-        ft_supertypes.setText("Legendary");
-        ft_supertypes.setBounds(82, 188, 250, 21);
+        ft_superTypes = new Text(filterComp, SWT.BORDER);
+        ft_superTypes.setText("Legendary");
+        ft_superTypes.setBounds(82, 188, 250, 21);
         
-        Button filter_btn_clear = new Button(filterComp, SWT.NONE);
+        filter_btn_clear = new Button(filterComp, SWT.NONE);
         filter_btn_clear.setText("Clear Fields");
-        filter_btn_clear.setBounds(143, 626, 136, 25);
+        filter_btn_clear.setBounds(499, 306, 136, 25);
         
         Group grpPresets = new Group(filterComp, SWT.NONE);
         grpPresets.setText("Presets");
-        grpPresets.setBounds(6, 337, 953, 267);
+        grpPresets.setBounds(6, 337, 953, 314);
         
         fdrop_set = new Combo(grpPresets, SWT.NONE);
-        fdrop_set.setBounds(10, 39, 252, 23);
+        fdrop_set.setBounds(78, 33, 252, 23);
         
         Label fl_drop_set = new Label(grpPresets, SWT.NONE);
-        fl_drop_set.setBounds(10, 20, 62, 15);
+        fl_drop_set.setBounds(10, 39, 62, 15);
         fl_drop_set.setText("Set");
         
         Label fl_drop_types = new Label(grpPresets, SWT.NONE);
         fl_drop_types.setText("Types");
-        fl_drop_types.setBounds(10, 68, 62, 15);
+        fl_drop_types.setBounds(10, 93, 62, 15);
         
         fdrop_types = new Combo(grpPresets, SWT.NONE);
-        fdrop_types.setBounds(10, 87, 252, 23);
+        fdrop_types.setBounds(78, 89, 252, 23);
         
-        Button filter_btn_addPresets = new Button(grpPresets, SWT.NONE);
-        filter_btn_addPresets.setBounds(10, 232, 75, 25);
-        filter_btn_addPresets.setText("Add Presets");
+        Label fl_drop_supertypes = new Label(grpPresets, SWT.NONE);
+        fl_drop_supertypes.setText("Supertypes");
+        fl_drop_supertypes.setBounds(10, 147, 62, 15);
+        
+        fdrop_superTypes = new Combo(grpPresets, SWT.NONE);
+        fdrop_superTypes.setBounds(78, 145, 252, 23);
+        
+        Label fl_drop_subTypes = new Label(grpPresets, SWT.NONE);
+        fl_drop_subTypes.setText("Subtypes");
+        fl_drop_subTypes.setBounds(10, 201, 62, 15);
+        
+        fdrop_subTypes = new Combo(grpPresets, SWT.NONE);
+        fdrop_subTypes.setBounds(78, 201, 252, 23);
+        
+        fset_add = new Button(grpPresets, SWT.NONE);
+        fset_add.setBounds(336, 31, 40, 25);
+        fset_add.setText("Add");
+        
+        fset_set = new Button(grpPresets, SWT.NONE);
+        fset_set.setText("Set");
+        fset_set.setBounds(382, 31, 40, 25);
+        
+        ftypes_add = new Button(grpPresets, SWT.NONE);
+        ftypes_add.setText("Add");
+        ftypes_add.setBounds(336, 87, 40, 25);
+        
+        ftypes_set = new Button(grpPresets, SWT.NONE);
+        ftypes_set.setText("Set");
+        ftypes_set.setBounds(382, 87, 40, 25);
+        
+        fsuperTypes_add = new Button(grpPresets, SWT.NONE);
+        fsuperTypes_add.setText("Add");
+        fsuperTypes_add.setBounds(336, 143, 40, 25);
+        
+        fsuperTypes_set = new Button(grpPresets, SWT.NONE);
+        fsuperTypes_set.setText("Set");
+        fsuperTypes_set.setBounds(382, 143, 40, 25);
+        
+        fsubTypes_add = new Button(grpPresets, SWT.NONE);
+        fsubTypes_add.setText("Add");
+        fsubTypes_add.setBounds(336, 199, 40, 25);
+        
+        fsubTypes_set = new Button(grpPresets, SWT.NONE);
+        fsubTypes_set.setText("Set");
+        fsubTypes_set.setBounds(382, 199, 40, 25);
+        
+        fdrop_rarity = new Combo(grpPresets, SWT.NONE);
+        fdrop_rarity.setBounds(78, 257, 252, 23);
+        
+        Label fl_drop_rarity = new Label(grpPresets, SWT.NONE);
+        fl_drop_rarity.setText("Rarity");
+        fl_drop_rarity.setBounds(10, 255, 62, 15);
+        
+        frarity_set = new Button(grpPresets, SWT.NONE);
+        frarity_set.setText("Set");
+        frarity_set.setBounds(336, 255, 86, 25);
         
         TabItem tabResults = new TabItem(tabFolder, SWT.NONE);
         tabResults.setText("Results");
@@ -390,6 +480,18 @@ public class MainApplicationWindow {
             }
         };
         
+        listener_clear = new Listener() {
+            public void handleEvent(Event e) {
+                switch (e.type) {
+                case SWT.Selection:
+                {
+                    clearButtonPressed();
+                    break;
+                }
+                }
+            }
+        };
+        
         resultList.addListener(SWT.Selection, new Listener() {
             @Override
             public void handleEvent(Event arg0) {
@@ -401,8 +503,7 @@ public class MainApplicationWindow {
         
         rt_btn_export.addListener(SWT.Selection, listener_export);
         filter_btn_fetch.addListener(SWT.Selection, listener_fetch);
-        
-        initPresets();
+        filter_btn_clear.addListener(SWT.Selection, listener_clear);
         
         Group grpCard = new Group(resultComp, SWT.NONE);
         grpCard.setText("Card");
@@ -431,6 +532,133 @@ public class MainApplicationWindow {
         rt_flavour = new Text(grpCard, SWT.BORDER | SWT.WRAP | SWT.V_SCROLL);
         rt_flavour.setLocation(235, 148);
         rt_flavour.setSize(322, 51);
+        
+        initPresets();
+        addButtonListeners();
+    }
+    
+    private void addButtonListeners()
+    {
+        listener_drop_set_add = getNewPresetButtonListener(FieldType.SETNAME, ButtonType.ADD);
+        listener_drop_set_set = getNewPresetButtonListener(FieldType.SETNAME, ButtonType.SET);
+        
+        listener_drop_types_add = getNewPresetButtonListener(FieldType.TYPES, ButtonType.ADD);
+        listener_drop_types_set = getNewPresetButtonListener(FieldType.TYPES, ButtonType.SET);
+        
+        listener_drop_superTypes_add = getNewPresetButtonListener(FieldType.SUPERTYPES, ButtonType.ADD);
+        listener_drop_superTypes_set = getNewPresetButtonListener(FieldType.SUPERTYPES, ButtonType.SET);
+        
+        listener_drop_subTypes_add = getNewPresetButtonListener(FieldType.SUBTYPES, ButtonType.ADD);
+        listener_drop_subTypes_set = getNewPresetButtonListener(FieldType.SUBTYPES, ButtonType.SET);
+        
+        listener_drop_rarity_set = getNewPresetButtonListener(FieldType.RARITY, ButtonType.SET);
+        
+        fset_add.addListener(SWT.Selection, listener_drop_set_add);
+        fset_set.addListener(SWT.Selection, listener_drop_set_set);
+        
+        ftypes_add.addListener(SWT.Selection, listener_drop_types_add);
+        ftypes_set.addListener(SWT.Selection, listener_drop_types_set);
+        
+        fsuperTypes_add.addListener(SWT.Selection, listener_drop_superTypes_add);
+        fsuperTypes_set.addListener(SWT.Selection, listener_drop_superTypes_set);
+        
+        fsubTypes_add.addListener(SWT.Selection, listener_drop_subTypes_add);
+        fsubTypes_set.addListener(SWT.Selection, listener_drop_subTypes_set);
+        
+        frarity_set.addListener(SWT.Selection, listener_drop_rarity_set);
+    }
+    
+    private Listener getNewPresetButtonListener(FieldType ft, ButtonType bt)
+    {
+        return new Listener() {
+            public void handleEvent(Event e) {
+                switch (e.type) {
+                case SWT.Selection:
+                {
+                    presetButtonPressed(ft, bt);
+                    break;
+                }
+                }
+            }
+        };
+    }
+    
+    private void presetButtonPressed(FieldType ft, ButtonType bt)
+    {
+        Combo thisDropDown = getDropDown(ft);
+        String newText = thisDropDown.getText();
+        
+        if(newText != null && !newText.isEmpty())
+        {
+            switch(bt)
+            {
+            case ADD:
+                addText(newText, getTextField(ft));
+                break;
+            case SET:
+                setText(newText, getTextField(ft));
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    
+    private Text getTextField(FieldType ft)
+    {
+        switch(ft)
+        {
+        case SETNAME:
+            return ft_setName;
+        case SUBTYPES:
+            return ft_subTypes;
+        case SUPERTYPES:
+            return ft_superTypes;
+        case TYPES:
+            return ft_types;
+        case RARITY:
+            return ft_rarity;
+        default:
+            System.out.println("Text field type not supported! Fix this!");
+            return null;
+        }
+    }
+    
+    private void setText(String newText, Text textField)
+    {
+        textField.setText(newText);
+        textField.update();
+    }
+    
+    private void addText(String newText, Text textField)
+    {
+        if(textField.getText().length() < 1)
+        {
+            setText(newText, textField);
+        } else {
+            textField.setText(textField.getText()+", "+newText);
+            textField.update();
+        }
+    }
+    
+    private Combo getDropDown(FieldType ft)
+    {
+        switch(ft)
+        {
+        case SETNAME:
+            return fdrop_set;
+        case SUBTYPES:
+            return fdrop_subTypes;
+        case SUPERTYPES:
+            return fdrop_superTypes;
+        case TYPES:
+            return fdrop_types;
+        case RARITY:
+            return fdrop_rarity;
+        default:
+            System.out.println("Drop down type not supported! Fix this!");
+            return null;
+        }
     }
     
     private void initPresets()
@@ -448,8 +676,29 @@ public class MainApplicationWindow {
             fdrop_set.add(set.getName());
         }
         
+        for(String s : CardAPI.getAllCardSupertypes())
+        {
+            fdrop_superTypes.add(s.toString());
+        }
+        
+        for(String s : CardAPI.getAllCardSubtypes())
+        {
+            fdrop_subTypes.add(s.toString());
+        }
+        
+        //Rarities
+        fdrop_rarity.add("Uncommon");
+        fdrop_rarity.add("Common");
+        fdrop_rarity.add("Rare");
+        fdrop_rarity.add("Mythic Rare");
+        fdrop_rarity.add("Special");
+        
+        
         fdrop_types.update();
         fdrop_set.update();
+        fdrop_superTypes.update();
+        fdrop_subTypes.update();
+        fdrop_rarity.update();
     }
     
     private void updateResultFields(int selectionIndex)
@@ -580,6 +829,41 @@ public class MainApplicationWindow {
         }
     }
     
+    private void clearButtonPressed()
+    {
+        if(filter_btn_clear.isEnabled())
+        {
+            //Disable the buttons
+            disableButtons();
+
+            ft_cardName.setText("");
+            ft_types.setText("");
+            ft_superTypes.setText("");
+            ft_subTypes.setText("");
+            ft_artist.setText("");
+            ft_setName.setText("");
+            ft_colors.setText("");
+            ft_rarity.setText("");
+            ft_cmc.setText("");
+            ft_toughness.setText("");
+            ft_power.setText("");
+            
+            ft_cardName.update();
+            ft_types.update();
+            ft_superTypes.update();
+            ft_subTypes.update();
+            ft_artist.update();
+            ft_setName.update();
+            ft_colors.update();
+            ft_rarity.update();
+            ft_cmc.update();
+            ft_toughness.update();
+            ft_power.update();
+            
+            enableButtons();
+        }
+    }
+    
     private void fetchButtonPressed()
     {
         if(filter_btn_fetch.isEnabled())
@@ -601,18 +885,22 @@ public class MainApplicationWindow {
     synchronized private void disableButtons()
     {
         filter_btn_fetch.setEnabled(false);
+        filter_btn_clear.setEnabled(false);
         rt_btn_export.setEnabled(false);
         
         filter_btn_fetch.update();
         rt_btn_export.update();
+        filter_btn_clear.update();
     }
     
     synchronized private static void enableButtons()
     {
         filter_btn_fetch.setEnabled(true);
+        filter_btn_clear.setEnabled(true);
         rt_btn_export.setEnabled(true);
         
         filter_btn_fetch.update();
+        filter_btn_clear.update();
         rt_btn_export.update();
     }
     
@@ -645,7 +933,7 @@ public class MainApplicationWindow {
         addFilterSingleton(newFilters, "name=", ft_cardName);
         
         //Super-Types
-        addFilterMulti(newFilters, "supertypes=", ft_supertypes);
+        addFilterMulti(newFilters, "supertypes=", ft_superTypes);
         
         //Type
         addFilterMulti(newFilters, "types=", ft_types);
@@ -672,9 +960,9 @@ public class MainApplicationWindow {
         if(textFromField != null && !textFromField.isEmpty())
         {
             curFilters.add(filterPrefix+textFromField);
-            System.out.println("Added filter: "+filterPrefix+textFromField);
+            //System.out.println("Added filter: "+filterPrefix+textFromField);
         } else {
-            System.out.println("No filter for field.");
+            //System.out.println("No filter for field.");
         }
             
     }
@@ -695,9 +983,9 @@ public class MainApplicationWindow {
             }
             
             curFilters.add(filterPrefix+newText);
-            System.out.println("Added filter: "+filterPrefix+newText);
+            //System.out.println("Added filter: "+filterPrefix+newText);
         } else {
-            System.out.println("No filter for field.");
+            //System.out.println("No filter for field.");
         }
     }
     
