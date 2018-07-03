@@ -8,7 +8,7 @@ import org.eclipse.swt.widgets.Menu;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import javax.swing.JOptionPane;
+import java.util.Timer;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MenuItem;
@@ -19,15 +19,20 @@ import org.eclipse.swt.widgets.Text;
 
 import com.gmail.nossr50.enums.AppState;
 import com.gmail.nossr50.enums.ButtonType;
+import com.gmail.nossr50.enums.ExportType;
 import com.gmail.nossr50.enums.FieldType;
+import com.gmail.nossr50.runnables.DialogThread;
 import com.gmail.nossr50.runnables.ExportThread;
 import com.gmail.nossr50.runnables.QueryThread;
 
 import com.gmail.nossr50.tools.CardImageManager;
+import com.gmail.nossr50.tools.UpdateTimerTask;
+
 import io.magicthegathering.javasdk.api.CardAPI;
 import io.magicthegathering.javasdk.api.SetAPI;
 import io.magicthegathering.javasdk.resource.Card;
 import io.magicthegathering.javasdk.resource.MtgSet;
+import io.magicthegathering.javasdk.resource.Ruling;
 
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Button;
@@ -35,6 +40,9 @@ import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.ProgressBar;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.wb.swt.SWTResourceManager;
 
 public class MainApplicationWindow {
 
@@ -42,8 +50,33 @@ public class MainApplicationWindow {
     private CardImageManager cardImageManager;
     
     private String appName  = "MTG JSON Tool";
-    private String ver      = "v0.00.01";
+    private String ver      = "v0.00.02";
     private String author   = "nossr50";
+    
+    public static int secondsPassed     = 0;
+    public static int numResults        = 0;
+    
+    public static Label filter_lbl_thinkTime;
+    public static Label filter_lbl_progressBar;
+    public static Timer timer;
+    public static Label filter_lbl_header_note1;
+    public static StyledText styledWarning;
+    
+    /*
+     * Tabs
+     */
+    
+    public static TabFolder tabFolder;
+    public static TabItem tabResults;
+    public static TabItem tabFilters;
+    public static TabItem tbtmAdvancedExport;
+    
+    /*
+     * Text
+     * FT = Filter Tab (editable for searching)
+     * RT = Result Tab
+     * ET = Export Tab
+     */
     
     private Text ft_cardName;
     private Text ft_types;
@@ -55,6 +88,8 @@ public class MainApplicationWindow {
     private Text ft_cmc;
     private Text ft_power;
     private Text ft_toughness;
+    private Text ft_superTypes;
+    
     private Text rt_setName;
     private Text rt_colors;
     private Text rt_rarity;
@@ -66,11 +101,21 @@ public class MainApplicationWindow {
     private Text rt_power;
     private Text rt_toughness;
     private Text rt_artURL;
+    private Text rt_supertypes;
+    private Text rt_cardText;
+    private Text rt_flavour;
+    private Text rt_rulings;
     
+    /*
+     * Buttons
+     */
+    
+    //Buttons that do something complicated
     private static Button filter_btn_fetch;
     private static Button rt_btn_export;
     private static Button filter_btn_clear;
     
+    //Add and Set buttons for presets
     private Button fset_add;
     private Button fset_set;
     private Button ftypes_add;
@@ -81,10 +126,15 @@ public class MainApplicationWindow {
     private Button fsubTypes_set;
     private Button frarity_set;
     
-    private Text ft_superTypes;
-    private Text rt_supertypes;
+    /*
+     * List (Query Results)
+     */
     
     private static List resultList;
+    
+    /*
+     * Listeners
+     */
     
     private Listener listener_fetch;
     private Listener listener_export;
@@ -106,19 +156,31 @@ public class MainApplicationWindow {
     private Listener listener_drop_superTypes_set;
     private Listener listener_drop_subTypes_add;
     private Listener listener_drop_subTypes_set;
-    //private Listener listener_drop_rarity_add;
     private Listener listener_drop_rarity_set;
     
+    
+    /*
+     * Other vars
+     */
     public static ArrayList<Card> results;
     public static AppState curState = AppState.IDLE;
-    private Text rt_cardText;
-    private Text rt_flavour;
+    
+    /*
+     * Combos (Drop Down Menus)
+     */
     
     private Combo fdrop_set;
     private Combo fdrop_types;
     private Combo fdrop_superTypes;
     private Combo fdrop_subTypes;
     private Combo fdrop_rarity;
+    
+    /*
+     * Progress Bars
+     */
+    
+    private static ProgressBar queryProgressBar;
+    
 
     /**
      * Launch the application.
@@ -171,43 +233,43 @@ public class MainApplicationWindow {
         MenuItem mntmExit = new MenuItem(menu_1, SWT.NONE);
         mntmExit.setText("Exit");
         
-        TabFolder tabFolder = new TabFolder(shell, SWT.NONE);
+        tabFolder = new TabFolder(shell, SWT.NONE);
         tabFolder.setBounds(10, 10, 977, 689);
         
-        TabItem tabFilters = new TabItem(tabFolder, SWT.NONE);
+        tabFilters = new TabItem(tabFolder, SWT.NONE);
         tabFilters.setText("Filters");
         
         Composite filterComp = new Composite(tabFolder, SWT.NONE);
         tabFilters.setControl(filterComp);
         
         ft_cardName = new Text(filterComp, SWT.BORDER);
-        ft_cardName.setBounds(82, 164, 250, 21);
+        ft_cardName.setBounds(378, 151, 250, 21);
         
         Label filter_lbl_cardName = new Label(filterComp, SWT.NONE);
-        filter_lbl_cardName.setBounds(10, 167, 66, 15);
+        filter_lbl_cardName.setBounds(306, 154, 66, 15);
         filter_lbl_cardName.setText("Card Name");
         
         Label filter_lbl_types = new Label(filterComp, SWT.NONE);
-        filter_lbl_types.setBounds(10, 215, 55, 15);
+        filter_lbl_types.setBounds(306, 202, 55, 15);
         filter_lbl_types.setText("Types");
         
         ft_types = new Text(filterComp, SWT.BORDER);
         ft_types.setText("Creature");
-        ft_types.setBounds(82, 212, 250, 21);
+        ft_types.setBounds(378, 199, 250, 21);
         
         ft_subTypes = new Text(filterComp, SWT.BORDER);
-        ft_subTypes.setBounds(82, 236, 250, 21);
+        ft_subTypes.setBounds(378, 223, 250, 21);
         
         ft_artist = new Text(filterComp, SWT.BORDER);
-        ft_artist.setBounds(82, 260, 250, 21);
+        ft_artist.setBounds(378, 247, 250, 21);
         
         Label filter_lbl_subTypes = new Label(filterComp, SWT.NONE);
         filter_lbl_subTypes.setText("Subtypes");
-        filter_lbl_subTypes.setBounds(10, 239, 55, 15);
+        filter_lbl_subTypes.setBounds(306, 226, 55, 15);
         
         Label filter_lbl_artist = new Label(filterComp, SWT.NONE);
         filter_lbl_artist.setText("Artist");
-        filter_lbl_artist.setBounds(10, 263, 55, 15);
+        filter_lbl_artist.setBounds(306, 250, 55, 15);
         
         Label filter_lbl_setName = new Label(filterComp, SWT.NONE);
         filter_lbl_setName.setText("Set Name");
@@ -240,45 +302,33 @@ public class MainApplicationWindow {
         
         Label filter_lbl_power = new Label(filterComp, SWT.NONE);
         filter_lbl_power.setText("Power");
-        filter_lbl_power.setBounds(10, 287, 66, 15);
+        filter_lbl_power.setBounds(306, 274, 66, 15);
         
         ft_power = new Text(filterComp, SWT.BORDER);
-        ft_power.setBounds(82, 284, 250, 21);
+        ft_power.setBounds(378, 271, 250, 21);
         
         Label filter_lbl_toughness = new Label(filterComp, SWT.NONE);
         filter_lbl_toughness.setText("Toughness");
-        filter_lbl_toughness.setBounds(10, 311, 66, 15);
+        filter_lbl_toughness.setBounds(306, 298, 66, 15);
         
         ft_toughness = new Text(filterComp, SWT.BORDER);
-        ft_toughness.setBounds(82, 308, 250, 21);
+        ft_toughness.setBounds(378, 295, 250, 21);
         
-        Label filter_lbl_header_generic = new Label(filterComp, SWT.NONE);
-        filter_lbl_header_generic.setBounds(82, 10, 55, 15);
+        Label filter_lbl_header_generic = new Label(filterComp, SWT.CENTER);
+        filter_lbl_header_generic.setBounds(82, 10, 250, 15);
         filter_lbl_header_generic.setText("Generic");
         
-        Label filter_lbl_header_specific = new Label(filterComp, SWT.NONE);
-        filter_lbl_header_specific.setBounds(82, 137, 55, 15);
+        Label filter_lbl_header_specific = new Label(filterComp, SWT.CENTER);
+        filter_lbl_header_specific.setBounds(378, 130, 250, 15);
         filter_lbl_header_specific.setText("Specific");
-        
-        filter_btn_fetch = new Button(filterComp, SWT.NONE);
-        filter_btn_fetch.setBounds(357, 306, 136, 25);
-        filter_btn_fetch.setText("Fetch Results");
-        
-        Label filter_lbl_header_note1 = new Label(filterComp, SWT.NONE);
-        filter_lbl_header_note1.setBounds(417, 287, 322, 15);
-        filter_lbl_header_note1.setText("Note: Fields can be blank!");
         
         Label filter_lbl_supertypes = new Label(filterComp, SWT.NONE);
         filter_lbl_supertypes.setText("Supertypes");
-        filter_lbl_supertypes.setBounds(10, 191, 66, 15);
+        filter_lbl_supertypes.setBounds(306, 178, 66, 15);
         
         ft_superTypes = new Text(filterComp, SWT.BORDER);
         ft_superTypes.setText("Legendary");
-        ft_superTypes.setBounds(82, 188, 250, 21);
-        
-        filter_btn_clear = new Button(filterComp, SWT.NONE);
-        filter_btn_clear.setText("Clear Fields");
-        filter_btn_clear.setBounds(499, 306, 136, 25);
+        ft_superTypes.setBounds(378, 175, 250, 21);
         
         Group grpPresets = new Group(filterComp, SWT.NONE);
         grpPresets.setText("Presets");
@@ -355,7 +405,50 @@ public class MainApplicationWindow {
         frarity_set.setText("Set");
         frarity_set.setBounds(336, 255, 86, 25);
         
-        TabItem tabResults = new TabItem(tabFolder, SWT.NONE);
+        Group grpQuery = new Group(filterComp, SWT.NONE);
+        grpQuery.setText("Query");
+        grpQuery.setBounds(10, 151, 278, 114);
+        
+        filter_lbl_header_note1 = new Label(grpQuery, SWT.NONE);
+        filter_lbl_header_note1.setAlignment(SWT.CENTER);
+        filter_lbl_header_note1.setBounds(10, 37, 258, 15);
+        filter_lbl_header_note1.setText("Tip: Fields can be blank!");
+        
+        filter_btn_fetch = new Button(grpQuery, SWT.NONE);
+        filter_btn_fetch.setBounds(10, 71, 116, 25);
+        filter_btn_fetch.setText("Fetch Results");
+        
+        filter_btn_clear = new Button(grpQuery, SWT.NONE);
+        filter_btn_clear.setBounds(152, 71, 116, 25);
+        filter_btn_clear.setText("Clear Fields");
+        
+        queryProgressBar = new ProgressBar(grpQuery, SWT.INDETERMINATE | SWT.SMOOTH | SWT.HORIZONTAL);
+        queryProgressBar.setBounds(10, 79, 258, 17);
+        queryProgressBar.setVisible(false);
+        
+        filter_lbl_thinkTime = new Label(grpQuery, SWT.SHADOW_NONE | SWT.CENTER);
+        filter_lbl_thinkTime.setBounds(39, 58, 193, 15);
+        filter_lbl_thinkTime.setText("[Time Passed]");
+        filter_lbl_thinkTime.setAlignment(SWT.CENTER);
+        filter_lbl_thinkTime.setVisible(false);
+        
+        filter_lbl_progressBar = new Label(grpQuery, SWT.SHADOW_NONE | SWT.CENTER);
+        filter_lbl_progressBar.setBounds(39, 37, 193, 15);
+        filter_lbl_progressBar.setAlignment(SWT.CENTER);
+        filter_lbl_progressBar.setText("Querying mtg-json.com DB...");
+        filter_lbl_progressBar.setVisible(false);
+        
+        styledWarning = new StyledText(filterComp, SWT.BORDER | SWT.WRAP);
+        styledWarning.setSelectionBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
+        styledWarning.setSelectionForeground(SWTResourceManager.getColor(255, 0, 0));
+        styledWarning.setText("[WARNING] You are doing a generic query which can return thousands of cards, this can take a very long time to finish!");
+        styledWarning.setBounds(10, 274, 278, 59);
+        styledWarning.setVisible(false);
+        
+        //queryProgressBar.setMaximum(5);
+        //queryProgressBar.setSelection(1);
+        
+        tabResults = new TabItem(tabFolder, SWT.NONE);
         tabResults.setText("Results");
         
         Composite resultComp = new Composite(tabFolder, SWT.NONE);
@@ -501,9 +594,7 @@ public class MainApplicationWindow {
         });
         
         
-        rt_btn_export.addListener(SWT.Selection, listener_export);
-        filter_btn_fetch.addListener(SWT.Selection, listener_fetch);
-        filter_btn_clear.addListener(SWT.Selection, listener_clear);
+        
         
         Group grpCard = new Group(resultComp, SWT.NONE);
         grpCard.setText("Card");
@@ -533,8 +624,132 @@ public class MainApplicationWindow {
         rt_flavour.setLocation(235, 148);
         rt_flavour.setSize(322, 51);
         
+        rt_rulings = new Text(grpCard, SWT.BORDER | SWT.WRAP | SWT.V_SCROLL);
+        rt_rulings.setBounds(236, 223, 322, 93);
+        
+        Label result_lbl_cardRulings = new Label(grpCard, SWT.NONE);
+        result_lbl_cardRulings.setText("Rulings / Legalities");
+        result_lbl_cardRulings.setBounds(237, 205, 321, 15);
+        
+        tbtmAdvancedExport = new TabItem(tabFolder, SWT.NONE);
+        tbtmAdvancedExport.setText("Advanced Export");
+        
+        Composite composite = new Composite(tabFolder, SWT.NONE);
+        tbtmAdvancedExport.setControl(composite);
+        
+        Group grpPresets_1 = new Group(composite, SWT.NONE);
+        grpPresets_1.setText("Presets");
+        grpPresets_1.setBounds(10, 203, 182, 106);
+        
+        Label lblSimpleExportOnly = new Label(grpPresets_1, SWT.WRAP);
+        lblSimpleExportOnly.setBounds(10, 54, 147, 49);
+        lblSimpleExportOnly.setText("Simple Export only dumps card names from a query.");
+        
+        Button btnSimpleExport = new Button(grpPresets_1, SWT.NONE);
+        btnSimpleExport.setBounds(10, 23, 147, 25);
+        btnSimpleExport.setText("Simple Export");
+        
+        Group grpCustomExport = new Group(composite, SWT.NONE);
+        grpCustomExport.setText("Custom Export");
+        grpCustomExport.setBounds(10, 0, 556, 197);
+        
+        Button btnCardName = new Button(grpCustomExport, SWT.CHECK);
+        btnCardName.setBounds(10, 26, 93, 16);
+        btnCardName.setSelection(true);
+        btnCardName.setText("Card Name");
+        
+        Button btnSetName = new Button(grpCustomExport, SWT.CHECK);
+        btnSetName.setBounds(10, 48, 93, 16);
+        btnSetName.setText("Set Name");
+        btnSetName.setSelection(true);
+        
+        Button btnSupertypes = new Button(grpCustomExport, SWT.CHECK);
+        btnSupertypes.setBounds(109, 26, 93, 16);
+        btnSupertypes.setText("Supertypes");
+        btnSupertypes.setSelection(true);
+        
+        Button btnTypes = new Button(grpCustomExport, SWT.CHECK);
+        btnTypes.setBounds(109, 48, 93, 16);
+        btnTypes.setText("Types");
+        btnTypes.setSelection(true);
+        
+        Button btnSubtypes = new Button(grpCustomExport, SWT.CHECK);
+        btnSubtypes.setBounds(109, 70, 93, 16);
+        btnSubtypes.setText("Subtypes");
+        btnSubtypes.setSelection(true);
+        
+        Button btnColors = new Button(grpCustomExport, SWT.CHECK);
+        btnColors.setBounds(208, 26, 93, 16);
+        btnColors.setText("Colors");
+        btnColors.setSelection(true);
+        
+        Button btnCmc = new Button(grpCustomExport, SWT.CHECK);
+        btnCmc.setBounds(208, 48, 93, 16);
+        btnCmc.setText("CMC");
+        btnCmc.setSelection(true);
+        
+        Button btnPower = new Button(grpCustomExport, SWT.CHECK);
+        btnPower.setBounds(208, 70, 93, 16);
+        btnPower.setText("Power");
+        btnPower.setSelection(true);
+        
+        Button btnToughness = new Button(grpCustomExport, SWT.CHECK);
+        btnToughness.setBounds(208, 92, 93, 16);
+        btnToughness.setText("Toughness");
+        btnToughness.setSelection(true);
+        
+        Button btnRarity = new Button(grpCustomExport, SWT.CHECK);
+        btnRarity.setBounds(208, 114, 93, 16);
+        btnRarity.setText("Rarity");
+        btnRarity.setSelection(true);
+        
+        Button btnLegalities = new Button(grpCustomExport, SWT.CHECK);
+        btnLegalities.setBounds(307, 92, 93, 16);
+        btnLegalities.setText("Legalities");
+        btnLegalities.setSelection(true);
+        
+        Button btnArtist = new Button(grpCustomExport, SWT.CHECK);
+        btnArtist.setBounds(307, 70, 93, 16);
+        btnArtist.setText("Artist");
+        btnArtist.setSelection(true);
+        
+        Button btnFlavourText = new Button(grpCustomExport, SWT.CHECK);
+        btnFlavourText.setBounds(307, 48, 93, 16);
+        btnFlavourText.setText("Flavour Text");
+        btnFlavourText.setSelection(true);
+        
+        Button btnCardText = new Button(grpCustomExport, SWT.CHECK);
+        btnCardText.setBounds(307, 26, 93, 16);
+        btnCardText.setText("Card Text");
+        btnCardText.setSelection(true);
+        
+        Button btnHeadersBetweenCards = new Button(grpCustomExport, SWT.CHECK);
+        btnHeadersBetweenCards.setBounds(406, 26, 147, 16);
+        btnHeadersBetweenCards.setText("Headers between cards");
+        btnHeadersBetweenCards.setSelection(true);
+        
+        Button btnLabelsForFields = new Button(grpCustomExport, SWT.CHECK);
+        btnLabelsForFields.setBounds(406, 48, 147, 16);
+        btnLabelsForFields.setText("Labels for fields");
+        btnLabelsForFields.setSelection(true);
+        
+        Button btnNewButton = new Button(grpCustomExport, SWT.NONE);
+        btnNewButton.setBounds(109, 162, 291, 25);
+        btnNewButton.setText("Custom Export");
+        
+        rt_btn_export.addListener(SWT.Selection, listener_export);
+        filter_btn_clear.addListener(SWT.Selection, listener_clear);
+        filter_btn_fetch.addListener(SWT.Selection, listener_fetch);
+        
+        styledWarning.setSelection(0, 9);
+        styledWarning.update();
+        
         initPresets();
         addButtonListeners();
+        
+        //Finally set all widgets to a default state
+        setState(AppState.IDLE);
+        updateWidgets();
     }
     
     private void addButtonListeners()
@@ -749,6 +964,12 @@ public class MainApplicationWindow {
             //Flavour Text
             updateResultField(rt_flavour, curCard.getFlavor());
             
+            //Rulings & Legalities
+            if(curCard.getRulings() != null && curCard.getRulings().length > 0)
+                updateResultField(rt_rulings, curCard.getRulings());
+            else
+                updateResultField(rt_rulings, ""); //Empty it
+            
             //Image URL (Card Art)
             updateResultField(rt_artURL, curCard.getImageUrl());
             
@@ -772,6 +993,24 @@ public class MainApplicationWindow {
                 cardImageManager.setVisibility(false);
             }
         }
+    }
+    
+    private void updateResultField(Text resultField, Ruling[] rulings)
+    {
+        String newString = "";
+        
+        for(int a = 0; a < rulings.length; a++)
+        {
+            String curString = rulings[a].getText();
+            
+            for(int x = 0; x < curString.length(); x++)
+            {
+                newString+=curString.toCharArray()[x];
+            }
+        }
+        
+        resultField.setText(newString);
+        resultField.update();
     }
     
     private void updateResultField(Text resultField, String[] results)
@@ -815,14 +1054,8 @@ public class MainApplicationWindow {
     {
         if(rt_btn_export.isEnabled())
         {
-            //Disable the buttons
-            disableButtons();
-
-            //progressBar.setVisible(true);
-            //progressBar.update();
-
-            //Executes the DeckScript in a new thread
-            ExportThread et = new ExportThread(results);
+            //Executes the Export script in a new thread
+            ExportThread et = new ExportThread(results, ExportType.STANDARD);
             Thread thread = new Thread(et);
 
             thread.start();
@@ -833,9 +1066,6 @@ public class MainApplicationWindow {
     {
         if(filter_btn_clear.isEnabled())
         {
-            //Disable the buttons
-            disableButtons();
-
             ft_cardName.setText("");
             ft_types.setText("");
             ft_superTypes.setText("");
@@ -859,8 +1089,6 @@ public class MainApplicationWindow {
             ft_cmc.update();
             ft_toughness.update();
             ft_power.update();
-            
-            enableButtons();
         }
     }
     
@@ -868,21 +1096,15 @@ public class MainApplicationWindow {
     {
         if(filter_btn_fetch.isEnabled())
         {
-            //Disable the buttons
-            disableButtons();
-
-            //progressBar.setVisible(true);
-            //progressBar.update();
-
-            //Executes the DeckScript in a new thread
-            QueryThread qs = new QueryThread(getFilters());
-            Thread thread = new Thread(qs);
+            //Executes the Query in a new thread
+            QueryThread qt = new QueryThread(getFilters());
+            Thread thread = new Thread(qt);
 
             thread.start();
         }
     }
     
-    synchronized private void disableButtons()
+    synchronized private static void disableButtons()
     {
         filter_btn_fetch.setEnabled(false);
         filter_btn_clear.setEnabled(false);
@@ -909,6 +1131,15 @@ public class MainApplicationWindow {
         Display.getDefault().asyncExec(new Runnable() {
             public void run() {
                 enableButtons();
+            }
+        });
+    }
+    
+    synchronized public static void asyncDisableButtons()
+    {
+        Display.getDefault().asyncExec(new Runnable() {
+            public void run() {
+                disableButtons();
             }
         });
     }
@@ -992,6 +1223,7 @@ public class MainApplicationWindow {
     synchronized public static void setState(AppState newState)
     {
         curState = newState;
+        updateWidgets(); //Everytime the state changes we update the widgets
     }
     
     synchronized public static void asyncUpdateResults()
@@ -1025,6 +1257,141 @@ public class MainApplicationWindow {
     
     public static void createDialog(String dialogTxt)
     {
-        JOptionPane.showMessageDialog(null, dialogTxt);
+        DialogThread dt = new DialogThread(dialogTxt);
+        Thread thread = new Thread(dt);
+
+        thread.start();
+    }
+    
+    /**
+     * Updates widgets based on the current AppState
+     */
+    synchronized public static void updateWidgets()
+    {
+        switch(curState)
+        {
+        case FINISHED:
+            asyncToggleWarning(false); //Turn off the warning if its on
+            asyncUpdateProgressBar(false);
+            asyncEnableButtons();
+            stopTimer();
+            asyncUpdateResultTab();
+            break;
+        case IDLE:
+            asyncUpdateProgressBar(false);
+            //stopTimer(); //Maybe not a good idea
+            asyncEnableButtons();
+            break;
+        case RUNNING:
+            asyncUpdateProgressBar(true);
+            asyncDisableButtons();
+            startTimer();
+            break;
+        default:
+            break;
+        
+        }
+    }
+    
+    synchronized public static void asyncUpdateResultTab()
+    {
+        Display.getDefault().asyncExec(new Runnable() {
+            public void run() {
+                tabResults.setText("Results ("+numResults+")");
+                tabFolder.update();
+            }
+        });
+    }
+    
+    synchronized public static void asyncToggleWarning(boolean toggle)
+    {
+        Display.getDefault().asyncExec(new Runnable() {
+            public void run() {
+                styledWarning.setVisible(toggle);
+                styledWarning.update();
+            }
+        });
+    }
+    
+    public static void asyncUpdateProgressBar(boolean visible)
+    {
+        Display.getDefault().asyncExec(new Runnable() {
+            public void run() {
+                queryProgressBar.setVisible(visible);
+                queryProgressBar.update();
+            }
+        });
+    }
+    
+    synchronized public static void startTimer()
+    {
+        Display.getDefault().asyncExec(new Runnable() {
+            public void run() {
+                timer = new Timer("Query Timer", true);
+                filter_lbl_thinkTime.setText("Query Time: "+secondsPassed+"s");
+                
+                filter_lbl_thinkTime.setVisible(true);
+                filter_lbl_progressBar.setVisible(true);
+                
+                filter_btn_fetch.setVisible(false);
+                filter_btn_clear.setVisible(false);
+                filter_lbl_header_note1.setVisible(false);
+                
+                filter_btn_fetch.update();
+                filter_btn_clear.update();
+                filter_lbl_header_note1.update();
+                
+                
+                filter_lbl_thinkTime.update();
+                filter_lbl_progressBar.update();
+
+                timer.schedule(new UpdateTimerTask(), 1000l, 1000l);  // Run once a second 
+            }
+        });
+        
+    }
+    
+    synchronized public static void asyncUpdateTimer()
+    {
+        Display.getDefault().asyncExec(new Runnable() {
+            public void run() {
+                secondsPassed+=1;
+                filter_lbl_thinkTime.setText("Query Time: "+secondsPassed+"s");
+                filter_lbl_thinkTime.update();
+            }
+        });
+    }
+    
+    synchronized public static void stopTimer()
+    {
+        if(timer != null)
+        {
+            timer.cancel();
+        }
+        
+        Display.getDefault().asyncExec(new Runnable() {
+            public void run() {
+                secondsPassed=0;
+                
+                filter_lbl_thinkTime.setVisible(false);
+                filter_lbl_progressBar.setVisible(false);
+                
+                filter_lbl_thinkTime.update();
+                filter_lbl_progressBar.update();
+                
+                filter_btn_fetch.setVisible(true);
+                filter_btn_clear.setVisible(true);
+                filter_lbl_header_note1.setVisible(true);
+                
+                filter_btn_fetch.update();
+                filter_btn_clear.update();
+                filter_lbl_header_note1.update();
+            }
+        });
+    }
+    
+    synchronized public static void setNumResults(int resultCount)
+    {
+        numResults = resultCount;
     }
 }

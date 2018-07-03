@@ -11,23 +11,32 @@ import java.util.Date;
 
 import com.gmail.nossr50.MainApplicationWindow;
 import com.gmail.nossr50.enums.AppState;
+import com.gmail.nossr50.enums.ExportType;
+import com.gmail.nossr50.enums.Flags;
 
 import io.magicthegathering.javasdk.resource.Card;
 import io.magicthegathering.javasdk.resource.Ruling;
 
 public class Exporter {
     
-    private static String parentDir     = "mtg_json";
-    private static String expDir        = "mtg_json";
+    private static String mainDir                   = "exports";
+    private static String simpleExportDir           = "simple_exports";
+    private static String customExportDir           = "custom_exports";
+    
+    private static String header   = "============================================================";
+    private static String header2  = "------------------------------------------------------------";
+    
+    
 
-    public static void exportResults(ArrayList<Card> results)
+    public static void exportResults(ArrayList<Card> results, int flags, ExportType et)
     {
-        String exportDirPATH = parentDir + File.separator + expDir;
         
-        makeDirs(parentDir);
+        String exportDirPATH = getExportPath(et);
+        
+        makeDirs(mainDir);
         makeDirs(exportDirPATH);
         
-        String fileName = "testDump.txt";
+        String fileName = "queryExport.txt";
         
         String exportFilePATH = exportDirPATH + File.separator + fileName;
         
@@ -59,7 +68,7 @@ public class Exporter {
             }
 
             
-            buildCardData(sb, results);
+            buildCardData(sb, results, flags);
             
             sb.append("########################");
             sb.append(System.lineSeparator());
@@ -90,93 +99,126 @@ public class Exporter {
         }
     }
     
-    private static void buildCardData(StringBuilder sb, ArrayList<Card> results)
+    private static String getExportPath(ExportType et)
     {
-        String header   = "============================================================";
-        String header2  = "------------------------------------------------------------";
+        switch(et)
+        {
+        case CUSTOM:
+            return mainDir + File.separator + customExportDir;
+        case SIMPLE:
+            return mainDir + File.separator + simpleExportDir;
+        case STANDARD:
+            return mainDir + File.separator;
+        default:
+            return mainDir + File.separator;  
+        }
+    }
+    
+    private static void buildCardData(StringBuilder sb, ArrayList<Card> results, int flags)
+    {
+        
         for(Card c : results)
         {
             sb.append(header+System.lineSeparator());
             sb.append(header2+System.lineSeparator());
             
-            //Card Name
-            appendCardData(sb, "Name: ", c.getName());
+            System.out.println(flags | Flags.NOFLAGS);
             
-            //Set Name
-            appendCardData(sb, "Set: ", c.getSetName());
-            
-            //Rarity
-            appendCardData(sb, "Rarity: ", c.getRarity());
-            
-            //Colors
-            appendCardData(sb, "Colors: ", c.getColors());
-            
-            //CMC
-            appendCardData(sb, "CMC: ", Double.toString(c.getCmc()));
-            
-            //Super-Types
-            appendCardData(sb, "Super-Types: ", c.getSupertypes());
-            
-            //Type
-            appendCardData(sb, "Types: ", c.getTypes());
-            
-            //Sub-Types
-            appendCardData(sb, "Sub-Types: ", c.getSubtypes());
-            
-            //Power
-            appendCardData(sb, "Power: ", c.getPower());
-            
-            //Toughness
-            appendCardData(sb, "Toughness: ", c.getToughness());
-            
-            //Artist
-            appendCardData(sb, "Artist: ", c.getArtist());
-            
-            if(c.getOriginalText() != null || c.getText() != null)
+            if((flags | Flags.NOFLAGS) == Flags.NOFLAGS)
             {
-                
-                //Card Text
-                if(c.getOriginalText() != null && !c.getOriginalText().isEmpty())
-                {
-                    sb.append(System.lineSeparator());
-                    sb.append(System.lineSeparator());
-                    sb.append("--CARD TEXT [BEG]--"+System.lineSeparator());
-                    appendCardDataWrap(sb, c.getOriginalText());
-                    sb.append("--CARD TEXT [END]--"+System.lineSeparator());
-                }
-                else if(c.getText() != null && !c.getText().isEmpty())
-                {
-                    sb.append(System.lineSeparator());
-                    sb.append(System.lineSeparator());
-                    sb.append("--CARD TEXT [BEG]--"+System.lineSeparator());
-                    appendCardDataWrap(sb, c.getText());
-                    sb.append("--CARD TEXT [END]--"+System.lineSeparator());
-                }
+                exportAll(sb, c);
+            } else {
+                System.out.println("Special Flags for export activated!");
+                exportFlags(sb, c, flags);
             }
-            
-            
-            //Flavour Text
-            if(c.getFlavor() != null && !c.getFlavor().isEmpty())
-            {
-                sb.append(System.lineSeparator());
-                sb.append(System.lineSeparator());
-                sb.append("--FLAVOUR TXT [BEG]--"+System.lineSeparator());
-                appendCardDataWrap(sb, c.getFlavor());
-                sb.append("--FLAVOUR TXT [END]--"+System.lineSeparator());
-            }
-            
-            if(c.getRulings() != null && c.getRulings().length > 0)
-            {
-                sb.append(System.lineSeparator());
-                sb.append(System.lineSeparator());
-                sb.append("--LEGALITIES / RULINGS [BEG]--"+System.lineSeparator());
-                appendCardDataWrap(sb, c.getRulings());
-                sb.append("--LEGALITIES / RULINGS [END]--"+System.lineSeparator());
-            }
-            
-            sb.append(header2+System.lineSeparator());
-            sb.append(header+System.lineSeparator()+System.lineSeparator());
         }
+    }
+    
+    private static void exportFlags(StringBuilder sb, Card c, int flags)
+    {
+        if((flags & Flags.NAMES) == Flags.NAMES)
+            appendCardData(sb, "Name: ", c.getName());
+    }
+    
+    private static void exportAll(StringBuilder sb, Card c)
+    {
+        //Card Name
+        appendCardData(sb, "Name: ", c.getName());
+        
+        //Set Name
+        appendCardData(sb, "Set: ", c.getSetName());
+        
+        //Rarity
+        appendCardData(sb, "Rarity: ", c.getRarity());
+        
+        //Colors
+        appendCardData(sb, "Colors: ", c.getColors());
+        
+        //CMC
+        appendCardData(sb, "CMC: ", Double.toString(c.getCmc()));
+        
+        //Super-Types
+        appendCardData(sb, "Super-Types: ", c.getSupertypes());
+        
+        //Type
+        appendCardData(sb, "Types: ", c.getTypes());
+        
+        //Sub-Types
+        appendCardData(sb, "Sub-Types: ", c.getSubtypes());
+        
+        //Power
+        appendCardData(sb, "Power: ", c.getPower());
+        
+        //Toughness
+        appendCardData(sb, "Toughness: ", c.getToughness());
+        
+        //Artist
+        appendCardData(sb, "Artist: ", c.getArtist());
+        
+        if(c.getOriginalText() != null || c.getText() != null)
+        {
+            
+            //Card Text
+            if(c.getOriginalText() != null && !c.getOriginalText().isEmpty())
+            {
+                sb.append(System.lineSeparator());
+                sb.append(System.lineSeparator());
+                sb.append("--CARD TEXT [BEG]--"+System.lineSeparator());
+                appendCardDataWrap(sb, c.getOriginalText());
+                sb.append("--CARD TEXT [END]--"+System.lineSeparator());
+            }
+            else if(c.getText() != null && !c.getText().isEmpty())
+            {
+                sb.append(System.lineSeparator());
+                sb.append(System.lineSeparator());
+                sb.append("--CARD TEXT [BEG]--"+System.lineSeparator());
+                appendCardDataWrap(sb, c.getText());
+                sb.append("--CARD TEXT [END]--"+System.lineSeparator());
+            }
+        }
+        
+        
+        //Flavour Text
+        if(c.getFlavor() != null && !c.getFlavor().isEmpty())
+        {
+            sb.append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+            sb.append("--FLAVOUR TXT [BEG]--"+System.lineSeparator());
+            appendCardDataWrap(sb, c.getFlavor());
+            sb.append("--FLAVOUR TXT [END]--"+System.lineSeparator());
+        }
+        
+        if(c.getRulings() != null && c.getRulings().length > 0)
+        {
+            sb.append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+            sb.append("--LEGALITIES / RULINGS [BEG]--"+System.lineSeparator());
+            appendCardDataWrap(sb, c.getRulings());
+            sb.append("--LEGALITIES / RULINGS [END]--"+System.lineSeparator());
+        }
+        
+        sb.append(header2+System.lineSeparator());
+        sb.append(header+System.lineSeparator()+System.lineSeparator());
     }
     
     private static void appendCardData(StringBuilder sb, String prefix, String string)
@@ -185,7 +227,7 @@ public class Exporter {
         {
             sb.append(prefix+string+System.lineSeparator());
         } else {
-            sb.append(System.lineSeparator());
+            //sb.append(System.lineSeparator());
         }
     }
     
@@ -207,7 +249,7 @@ public class Exporter {
             
             sb.append(prefix+newString+System.lineSeparator());
         } else {
-            sb.append(System.lineSeparator());
+            //sb.append(System.lineSeparator());
         }
     }
     
@@ -226,7 +268,7 @@ public class Exporter {
             }
             sb.append(newString+System.lineSeparator());
         } else {
-            sb.append(System.lineSeparator());
+            //sb.append(System.lineSeparator());
         }
     }
     
