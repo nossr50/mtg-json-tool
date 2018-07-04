@@ -21,11 +21,14 @@ import com.gmail.nossr50.enums.AppState;
 import com.gmail.nossr50.enums.ButtonType;
 import com.gmail.nossr50.enums.ExportType;
 import com.gmail.nossr50.enums.FieldType;
+import com.gmail.nossr50.enums.StyleFlags;
+import com.gmail.nossr50.enums.ExportFlags;
 import com.gmail.nossr50.runnables.DialogThread;
 import com.gmail.nossr50.runnables.ExportThread;
 import com.gmail.nossr50.runnables.QueryThread;
 
 import com.gmail.nossr50.tools.CardImageManager;
+import com.gmail.nossr50.tools.ExportExample;
 import com.gmail.nossr50.tools.UpdateTimerTask;
 
 import io.magicthegathering.javasdk.api.CardAPI;
@@ -50,7 +53,7 @@ public class MainApplicationWindow {
     private CardImageManager cardImageManager;
     
     private String appName  = "MTG JSON Tool";
-    private String ver      = "v0.00.02";
+    private String ver      = "v0.00.03";
     private String author   = "nossr50";
     
     public static int secondsPassed     = 0;
@@ -61,6 +64,8 @@ public class MainApplicationWindow {
     public static Timer timer;
     public static Label filter_lbl_header_note1;
     public static StyledText styledWarning;
+    
+    public static ExportExample exportExample;
     
     /*
      * Tabs
@@ -113,6 +118,7 @@ public class MainApplicationWindow {
     //Buttons that do something complicated
     private static Button filter_btn_fetch;
     private static Button rt_btn_export;
+    private static Button btnCustomExport;
     private static Button filter_btn_clear;
     
     //Add and Set buttons for presets
@@ -126,6 +132,25 @@ public class MainApplicationWindow {
     private Button fsubTypes_set;
     private Button frarity_set;
     
+    //Advanced export buttons
+    private Button btnLabelBasics;
+    private Button btnHeaders;
+    private Button btnCardText;
+    private Button btnFlavourText;
+    private Button btnArtist;
+    private Button btnLegalities;
+    private Button btnRarity;
+    private Button btnToughness;
+    private Button btnPower;
+    private Button btnCmc;
+    private Button btnSubtypes;
+    private Button btnTypes;
+    private Button btnSupertypes;
+    private Button btnSetName;
+    private Button btnCardName;
+    private static Button btnSimpleExport;
+    private Button btnColors;
+    
     /*
      * List (Query Results)
      */
@@ -138,7 +163,10 @@ public class MainApplicationWindow {
     
     private Listener listener_fetch;
     private Listener listener_export;
+    private Listener listener_custom_export;
     private Listener listener_clear;
+    private Listener listener_custom_export_flags;
+    private Listener listener_simple_export;
     
     /*
     private Listener listener_drop_set;
@@ -180,6 +208,15 @@ public class MainApplicationWindow {
      */
     
     private static ProgressBar queryProgressBar;
+    private Label lblStyle;
+    private Label lblFluff;
+    private Label lblStats;
+    private Label lblBasic;
+    private Button btnLabelStats;
+    private Button btnLabelExtras;
+    private Button btnSpacingExtras;
+    private Text customExportPreview;
+    private Label lblCustomExportPreview;
     
 
     /**
@@ -543,7 +580,7 @@ public class MainApplicationWindow {
         
         rt_btn_export = new Button(resultComp, SWT.NONE);
         rt_btn_export.setBounds(10, 626, 107, 25);
-        rt_btn_export.setText("Export Results");
+        rt_btn_export.setText("Full Export");
         
         /*
          * Listeners
@@ -555,6 +592,42 @@ public class MainApplicationWindow {
                 case SWT.Selection:
                 {
                     exportButtonPressed();
+                    break;
+                }
+                }
+            }
+        };
+        
+        listener_simple_export = new Listener() {
+            public void handleEvent(Event e) {
+                switch (e.type) {
+                case SWT.Selection:
+                {
+                    simpleExportButtonPressed();
+                    break;
+                }
+                }
+            }
+        };
+        
+        listener_custom_export_flags = new Listener() {
+            public void handleEvent(Event e) {
+                switch (e.type) {
+                case SWT.Selection:
+                {
+                    customExportFlagsChanged();
+                    break;
+                }
+                }
+            }
+        };
+        
+        listener_custom_export = new Listener() {
+            public void handleEvent(Event e) {
+                switch (e.type) {
+                case SWT.Selection:
+                {
+                    customExportButtonPressed();
                     break;
                 }
                 }
@@ -592,9 +665,6 @@ public class MainApplicationWindow {
                     updateResultFields(resultList.getSelectionIndex());
             }
         });
-        
-        
-        
         
         Group grpCard = new Group(resultComp, SWT.NONE);
         grpCard.setText("Card");
@@ -639,117 +709,163 @@ public class MainApplicationWindow {
         
         Group grpPresets_1 = new Group(composite, SWT.NONE);
         grpPresets_1.setText("Presets");
-        grpPresets_1.setBounds(10, 203, 182, 106);
+        grpPresets_1.setBounds(10, 10, 166, 106);
         
         Label lblSimpleExportOnly = new Label(grpPresets_1, SWT.WRAP);
         lblSimpleExportOnly.setBounds(10, 54, 147, 49);
         lblSimpleExportOnly.setText("Simple Export only dumps card names from a query.");
         
-        Button btnSimpleExport = new Button(grpPresets_1, SWT.NONE);
+        btnSimpleExport = new Button(grpPresets_1, SWT.NONE);
         btnSimpleExport.setBounds(10, 23, 147, 25);
         btnSimpleExport.setText("Simple Export");
         
         Group grpCustomExport = new Group(composite, SWT.NONE);
         grpCustomExport.setText("Custom Export");
-        grpCustomExport.setBounds(10, 0, 556, 197);
+        grpCustomExport.setBounds(187, 10, 590, 197);
         
-        Button btnCardName = new Button(grpCustomExport, SWT.CHECK);
-        btnCardName.setBounds(10, 26, 93, 16);
+        btnCardName = new Button(grpCustomExport, SWT.CHECK);
+        btnCardName.setBounds(10, 52, 93, 16);
         btnCardName.setSelection(true);
         btnCardName.setText("Card Name");
         
-        Button btnSetName = new Button(grpCustomExport, SWT.CHECK);
-        btnSetName.setBounds(10, 48, 93, 16);
+        btnSetName = new Button(grpCustomExport, SWT.CHECK);
+        btnSetName.setBounds(10, 74, 93, 16);
         btnSetName.setText("Set Name");
         btnSetName.setSelection(true);
         
-        Button btnSupertypes = new Button(grpCustomExport, SWT.CHECK);
-        btnSupertypes.setBounds(109, 26, 93, 16);
+        btnSupertypes = new Button(grpCustomExport, SWT.CHECK);
+        btnSupertypes.setBounds(109, 52, 93, 16);
         btnSupertypes.setText("Supertypes");
         btnSupertypes.setSelection(true);
         
-        Button btnTypes = new Button(grpCustomExport, SWT.CHECK);
-        btnTypes.setBounds(109, 48, 93, 16);
+        btnTypes = new Button(grpCustomExport, SWT.CHECK);
+        btnTypes.setBounds(109, 74, 93, 16);
         btnTypes.setText("Types");
         btnTypes.setSelection(true);
         
-        Button btnSubtypes = new Button(grpCustomExport, SWT.CHECK);
-        btnSubtypes.setBounds(109, 70, 93, 16);
+        btnSubtypes = new Button(grpCustomExport, SWT.CHECK);
+        btnSubtypes.setBounds(109, 96, 93, 16);
         btnSubtypes.setText("Subtypes");
         btnSubtypes.setSelection(true);
         
-        Button btnColors = new Button(grpCustomExport, SWT.CHECK);
-        btnColors.setBounds(208, 26, 93, 16);
+        btnColors = new Button(grpCustomExport, SWT.CHECK);
+        btnColors.setBounds(208, 52, 78, 16);
         btnColors.setText("Colors");
         btnColors.setSelection(true);
         
-        Button btnCmc = new Button(grpCustomExport, SWT.CHECK);
-        btnCmc.setBounds(208, 48, 93, 16);
+        btnCmc = new Button(grpCustomExport, SWT.CHECK);
+        btnCmc.setBounds(208, 74, 78, 16);
         btnCmc.setText("CMC");
         btnCmc.setSelection(true);
         
-        Button btnPower = new Button(grpCustomExport, SWT.CHECK);
-        btnPower.setBounds(208, 70, 93, 16);
+        btnPower = new Button(grpCustomExport, SWT.CHECK);
+        btnPower.setBounds(208, 96, 78, 16);
         btnPower.setText("Power");
         btnPower.setSelection(true);
         
-        Button btnToughness = new Button(grpCustomExport, SWT.CHECK);
-        btnToughness.setBounds(208, 92, 93, 16);
+        btnToughness = new Button(grpCustomExport, SWT.CHECK);
+        btnToughness.setBounds(208, 118, 78, 16);
         btnToughness.setText("Toughness");
         btnToughness.setSelection(true);
         
-        Button btnRarity = new Button(grpCustomExport, SWT.CHECK);
-        btnRarity.setBounds(208, 114, 93, 16);
+        btnRarity = new Button(grpCustomExport, SWT.CHECK);
+        btnRarity.setBounds(208, 140, 78, 16);
         btnRarity.setText("Rarity");
         btnRarity.setSelection(true);
         
-        Button btnLegalities = new Button(grpCustomExport, SWT.CHECK);
-        btnLegalities.setBounds(307, 92, 93, 16);
+        btnLegalities = new Button(grpCustomExport, SWT.CHECK);
+        btnLegalities.setBounds(307, 114, 93, 16);
         btnLegalities.setText("Legalities");
-        btnLegalities.setSelection(true);
         
-        Button btnArtist = new Button(grpCustomExport, SWT.CHECK);
-        btnArtist.setBounds(307, 70, 93, 16);
+        btnArtist = new Button(grpCustomExport, SWT.CHECK);
+        btnArtist.setBounds(307, 92, 93, 16);
         btnArtist.setText("Artist");
-        btnArtist.setSelection(true);
         
-        Button btnFlavourText = new Button(grpCustomExport, SWT.CHECK);
-        btnFlavourText.setBounds(307, 48, 93, 16);
+        btnFlavourText = new Button(grpCustomExport, SWT.CHECK);
+        btnFlavourText.setBounds(307, 70, 93, 16);
         btnFlavourText.setText("Flavour Text");
-        btnFlavourText.setSelection(true);
         
-        Button btnCardText = new Button(grpCustomExport, SWT.CHECK);
-        btnCardText.setBounds(307, 26, 93, 16);
+        btnCardText = new Button(grpCustomExport, SWT.CHECK);
+        btnCardText.setBounds(307, 48, 93, 16);
         btnCardText.setText("Card Text");
-        btnCardText.setSelection(true);
         
-        Button btnHeadersBetweenCards = new Button(grpCustomExport, SWT.CHECK);
-        btnHeadersBetweenCards.setBounds(406, 26, 147, 16);
-        btnHeadersBetweenCards.setText("Headers between cards");
-        btnHeadersBetweenCards.setSelection(true);
+        btnHeaders = new Button(grpCustomExport, SWT.CHECK);
+        btnHeaders.setBounds(406, 48, 147, 16);
+        btnHeaders.setText("Headers between cards");
+        btnHeaders.setSelection(true);
         
-        Button btnLabelsForFields = new Button(grpCustomExport, SWT.CHECK);
-        btnLabelsForFields.setBounds(406, 48, 147, 16);
-        btnLabelsForFields.setText("Labels for fields");
-        btnLabelsForFields.setSelection(true);
+        btnLabelBasics = new Button(grpCustomExport, SWT.CHECK);
+        btnLabelBasics.setBounds(406, 70, 147, 16);
+        btnLabelBasics.setText("Label Basics");
+        btnLabelBasics.setSelection(true);
         
-        Button btnNewButton = new Button(grpCustomExport, SWT.NONE);
-        btnNewButton.setBounds(109, 162, 291, 25);
-        btnNewButton.setText("Custom Export");
+        btnCustomExport = new Button(grpCustomExport, SWT.NONE);
+        btnCustomExport.setBounds(109, 162, 291, 25);
+        btnCustomExport.setText("Custom Export");
         
         rt_btn_export.addListener(SWT.Selection, listener_export);
+        btnCustomExport.addListener(SWT.Selection, listener_custom_export);
         filter_btn_clear.addListener(SWT.Selection, listener_clear);
         filter_btn_fetch.addListener(SWT.Selection, listener_fetch);
         
         styledWarning.setSelection(0, 9);
         styledWarning.update();
         
+        lblStyle = new Label(grpCustomExport, SWT.CENTER);
+        lblStyle.setBounds(406, 26, 140, 15);
+        lblStyle.setText("Style");
+        
+        lblFluff = new Label(grpCustomExport, SWT.CENTER);
+        lblFluff.setBounds(307, 26, 93, 15);
+        lblFluff.setText("Extras");
+        
+        lblStats = new Label(grpCustomExport, SWT.CENTER);
+        lblStats.setBounds(109, 27, 177, 15);
+        lblStats.setText("Stats");
+        
+        lblBasic = new Label(grpCustomExport, SWT.CENTER);
+        lblBasic.setBounds(10, 26, 93, 15);
+        lblBasic.setText("Basic");
+        
+        btnLabelStats = new Button(grpCustomExport, SWT.CHECK);
+        btnLabelStats.setText("Label Stats");
+        btnLabelStats.setSelection(true);
+        btnLabelStats.setBounds(406, 92, 147, 16);
+        
+        btnLabelExtras = new Button(grpCustomExport, SWT.CHECK);
+        btnLabelExtras.setText("Label Extras");
+        btnLabelExtras.setSelection(true);
+        btnLabelExtras.setBounds(406, 114, 147, 16);
+        
+        btnSpacingExtras = new Button(grpCustomExport, SWT.CHECK);
+        btnSpacingExtras.setText("Empty lines between Extras");
+        btnSpacingExtras.setSelection(true);
+        btnSpacingExtras.setBounds(406, 140, 163, 16);
+        
+        exportExample = new ExportExample();
+        
+        customExportPreview = new Text(composite, SWT.BORDER | SWT.READ_ONLY | SWT.H_SCROLL | SWT.V_SCROLL | SWT.CANCEL);
+        customExportPreview.setBounds(10, 234, 949, 417);
+        customExportPreview.setText(exportExample.getExample(getExportFlags(), getStyleFlags()));
+        
+        lblCustomExportPreview = new Label(composite, SWT.NONE);
+        lblCustomExportPreview.setBounds(10, 213, 590, 15);
+        lblCustomExportPreview.setText("Custom Export Preview");
+        
+        initButtons();
         initPresets();
         addButtonListeners();
         
         //Finally set all widgets to a default state
         setState(AppState.IDLE);
         updateWidgets();
+    }
+    
+    private void initButtons()
+    {
+        rt_btn_export.setEnabled(false);
+        btnCustomExport.setEnabled(false);
+        btnSimpleExport.setEnabled(false);
     }
     
     private void addButtonListeners()
@@ -781,6 +897,27 @@ public class MainApplicationWindow {
         fsubTypes_set.addListener(SWT.Selection, listener_drop_subTypes_set);
         
         frarity_set.addListener(SWT.Selection, listener_drop_rarity_set);
+        
+        btnLabelBasics.addListener(SWT.Selection, listener_custom_export_flags);
+        btnLabelStats.addListener(SWT.Selection, listener_custom_export_flags);
+        btnLabelExtras.addListener(SWT.Selection, listener_custom_export_flags);
+        btnHeaders.addListener(SWT.Selection, listener_custom_export_flags);
+        btnCardText.addListener(SWT.Selection, listener_custom_export_flags);
+        btnFlavourText.addListener(SWT.Selection, listener_custom_export_flags);
+        btnArtist.addListener(SWT.Selection, listener_custom_export_flags);
+        btnLegalities.addListener(SWT.Selection, listener_custom_export_flags);
+        btnToughness.addListener(SWT.Selection, listener_custom_export_flags);
+        btnPower.addListener(SWT.Selection, listener_custom_export_flags);
+        btnCmc.addListener(SWT.Selection, listener_custom_export_flags);
+        btnSubtypes.addListener(SWT.Selection, listener_custom_export_flags);
+        btnSupertypes.addListener(SWT.Selection, listener_custom_export_flags);
+        btnTypes.addListener(SWT.Selection, listener_custom_export_flags);
+        btnSetName.addListener(SWT.Selection, listener_custom_export_flags);
+        btnCardName.addListener(SWT.Selection, listener_custom_export_flags);
+        btnColors.addListener(SWT.Selection, listener_custom_export_flags);
+        btnSpacingExtras.addListener(SWT.Selection, listener_custom_export_flags);
+        
+        btnSimpleExport.addListener(SWT.Selection, listener_simple_export);
     }
     
     private Listener getNewPresetButtonListener(FieldType ft, ButtonType bt)
@@ -1050,16 +1187,117 @@ public class MainApplicationWindow {
         resultField.update();
     }
     
+    private void simpleExportButtonPressed()
+    {
+        if(rt_btn_export.isEnabled())
+        {
+            //Executes the Export script in a new thread
+            ExportThread et = new ExportThread(results, ExportType.SIMPLE, ExportFlags.NAMES, StyleFlags.NOFLAGS);
+            Thread thread = new Thread(et);
+
+            thread.start();
+        }
+    }
+    
     private void exportButtonPressed()
     {
         if(rt_btn_export.isEnabled())
         {
             //Executes the Export script in a new thread
-            ExportThread et = new ExportThread(results, ExportType.STANDARD);
+            ExportThread et = new ExportThread(results, ExportType.STANDARD, ExportFlags.NOFLAGS, StyleFlags.NOFLAGS);
             Thread thread = new Thread(et);
 
             thread.start();
         }
+    }
+    
+    private void customExportButtonPressed()
+    {
+        if(btnCustomExport.isEnabled())
+        {
+            //Executes the Export script in a new thread with custom flags
+            ExportThread et = new ExportThread(results, ExportType.CUSTOM, getExportFlags(), getStyleFlags());
+            Thread thread = new Thread(et);
+
+            thread.start();
+        }
+    }
+    
+    private void customExportFlagsChanged()
+    {
+        customExportPreview.setText(exportExample.getExample(getExportFlags(), getStyleFlags()));
+        customExportPreview.update();
+    }
+    
+    private int getExportFlags()
+    {
+        int flags = ExportFlags.NOFLAGS;
+        
+        if(btnCardText.getSelection())
+            flags = flags | ExportFlags.CARD_TEXT;
+        
+        if(btnFlavourText.getSelection())
+            flags = flags | ExportFlags.FLAVOUR_TEXT;
+        
+        if(btnArtist.getSelection())
+            flags = flags | ExportFlags.ARTIST;
+        
+        if(btnLegalities.getSelection())
+            flags = flags | ExportFlags.LEGALITIES;
+        
+        if(btnRarity.getSelection())
+            flags = flags | ExportFlags.RARITY;
+        
+        if(btnToughness.getSelection())
+            flags = flags | ExportFlags.TOUGHNESS;
+        
+        if(btnPower.getSelection())
+            flags = flags | ExportFlags.POWER;
+        
+        if(btnCmc.getSelection())
+            flags = flags | ExportFlags.CMC;
+        
+        if(btnTypes.getSelection())
+            flags = flags | ExportFlags.TYPES;
+        
+        if(btnSubtypes.getSelection())
+            flags = flags | ExportFlags.SUBTYPES;
+        
+        if(btnSupertypes.getSelection())
+            flags = flags | ExportFlags.SUPERTYPES;
+        
+        if(btnSetName.getSelection())
+            flags = flags | ExportFlags.SETNAME;
+        
+        if(btnCardName.getSelection())
+            flags = flags | ExportFlags.NAMES;
+        
+        if(btnColors.getSelection())
+            flags = flags | ExportFlags.COLORS;
+        
+        return flags;
+    }
+    
+    private int getStyleFlags()
+    {
+        int flags = 0;
+        
+        if(btnLabelBasics.getSelection())
+            flags = flags | StyleFlags.PREFIX_BASIC;
+        
+        if(btnLabelStats.getSelection())
+            flags = flags | StyleFlags.PREFIX_STATS;
+        
+        if(btnLabelExtras.getSelection())
+            flags = flags | StyleFlags.PREFIX_EXTRA;
+        
+        if(btnSpacingExtras.getSelection())
+            flags = flags | StyleFlags.SPACING_BETWEEN_EXTRAS;
+        
+        if(btnHeaders.getSelection())
+            flags = flags | StyleFlags.HEADERS;
+        
+        return flags;
     }
     
     private void clearButtonPressed()
@@ -1109,21 +1347,36 @@ public class MainApplicationWindow {
         filter_btn_fetch.setEnabled(false);
         filter_btn_clear.setEnabled(false);
         rt_btn_export.setEnabled(false);
+        btnCustomExport.setEnabled(false);
+        btnSimpleExport.setEnabled(false);
         
         filter_btn_fetch.update();
         rt_btn_export.update();
         filter_btn_clear.update();
+        btnCustomExport.update();
     }
     
     synchronized private static void enableButtons()
     {
-        filter_btn_fetch.setEnabled(true);
         filter_btn_clear.setEnabled(true);
-        rt_btn_export.setEnabled(true);
+        
+        if(curState == AppState.IDLE || curState == AppState.FINISHED)
+        {
+            filter_btn_fetch.setEnabled(true);
+        }
+        
+        if(curState == AppState.FINISHED)
+        {
+            rt_btn_export.setEnabled(true);
+            btnCustomExport.setEnabled(true);
+            btnSimpleExport.setEnabled(true);
+        }
+        
         
         filter_btn_fetch.update();
         filter_btn_clear.update();
         rt_btn_export.update();
+        btnCustomExport.update();
     }
     
     synchronized public static void asyncEnableButtons()
