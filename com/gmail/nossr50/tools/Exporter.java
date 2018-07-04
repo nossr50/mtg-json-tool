@@ -33,6 +33,9 @@ public class Exporter {
         String exportDirPATH = getExportPath(et);
         
         makeDirs(mainDir);
+        makeDirs(mainDir+File.separator+simpleExportDir);
+        makeDirs(mainDir+File.separator+customExportDir);
+        
         makeDirs(exportDirPATH);
         
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");

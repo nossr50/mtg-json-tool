@@ -53,7 +53,7 @@ public class MainApplicationWindow {
     private CardImageManager cardImageManager;
     
     private String appName  = "MTG JSON Tool";
-    private String ver      = "v0.00.03";
+    private String ver      = "v0.00.05";
     private String author   = "nossr50";
     
     public static int secondsPassed     = 0;
@@ -217,6 +217,8 @@ public class MainApplicationWindow {
     private Button btnSpacingExtras;
     private Text customExportPreview;
     private Label lblCustomExportPreview;
+    private StyledText previewBuildWarning;
+    private TabItem tbtmImport;
     
 
     /**
@@ -481,6 +483,13 @@ public class MainApplicationWindow {
         styledWarning.setText("[WARNING] You are doing a generic query which can return thousands of cards, this can take a very long time to finish!");
         styledWarning.setBounds(10, 274, 278, 59);
         styledWarning.setVisible(false);
+        
+        previewBuildWarning = new StyledText(filterComp, SWT.BORDER | SWT.READ_ONLY | SWT.WRAP);
+        previewBuildWarning.setSelectionForeground(SWTResourceManager.getColor(SWT.COLOR_RED));
+        previewBuildWarning.setSelectionBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
+        previewBuildWarning.setText("NOTE: This is a preview build of an application still in development, if you find any bugs please post them here https://github.com/nossr50/mtg-json-tool/issues");
+        previewBuildWarning.setBounds(607, 10, 352, 64);
+        previewBuildWarning.setSelection(0, 4);
         
         //queryProgressBar.setMaximum(5);
         //queryProgressBar.setSelection(1);
@@ -851,6 +860,22 @@ public class MainApplicationWindow {
         lblCustomExportPreview = new Label(composite, SWT.NONE);
         lblCustomExportPreview.setBounds(10, 213, 590, 15);
         lblCustomExportPreview.setText("Custom Export Preview");
+        
+        tbtmImport = new TabItem(tabFolder, SWT.NONE);
+        tbtmImport.setText("Import");
+        
+        Composite composite_1 = new Composite(tabFolder, SWT.NONE);
+        tbtmImport.setControl(composite_1);
+        
+        Label lblComingSoon = new Label(composite_1, SWT.NONE);
+        lblComingSoon.setBounds(394, 297, 181, 15);
+        lblComingSoon.setText("Coming Soon...");
+        
+        Button btnImportMtgaDeck = new Button(composite_1, SWT.NONE);
+        btnImportMtgaDeck.setBounds(394, 318, 181, 25);
+        btnImportMtgaDeck.setText("Import MTGA Deck");
+        
+        btnImportMtgaDeck.setEnabled(false);
         
         initButtons();
         initPresets();
