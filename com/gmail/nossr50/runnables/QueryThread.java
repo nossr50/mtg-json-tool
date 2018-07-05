@@ -20,6 +20,7 @@ public class QueryThread implements Runnable {
     public void run() {
         MainApplicationWindow.setState(AppState.RUNNING);
         MainApplicationWindow.results = (ArrayList<Card>) Query.initQuery(curFilters);
+        MainApplicationWindow.initLegalities();
         MainApplicationWindow.asyncUpdateResults();
         MainApplicationWindow.setState(AppState.FINISHED);
     }

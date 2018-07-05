@@ -21,10 +21,10 @@ public class ExportExample {
         StringBuilder sb = new StringBuilder();
         
         //Hard Coded examples
+        Exporter.exportFlags(sb, exampleCard_c, exportFlags, styleFlags);
         Exporter.exportFlags(sb, exampleCard_d, exportFlags, styleFlags);
         Exporter.exportFlags(sb, exampleCard_a, exportFlags, styleFlags);
         Exporter.exportFlags(sb, exampleCard_b, exportFlags, styleFlags);
-        Exporter.exportFlags(sb, exampleCard_c, exportFlags, styleFlags);
         
         return sb.toString();
     }

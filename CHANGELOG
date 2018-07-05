@@ -1,3 +1,15 @@
+v0.00.06
+
+- Added new (optional) simplified view to shorten export logs and make them more readable
+- Legalities renamed to Rulings (accidentally mislabeled)
+- Added Legalities (Card Ban Status) display to Results
+- Added Mana cost display to Results
+- Added Legalities (Card Ban Status) to export
+- Added Mana Cost to export
+- Moved some UI Elements around on the filters tab
+
+
+==========
 v0.00.05
 
 First public release

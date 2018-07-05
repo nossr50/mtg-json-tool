@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import com.gmail.nossr50.MainApplicationWindow;
 import com.gmail.nossr50.enums.AppState;
 import com.gmail.nossr50.enums.ExportType;
-import com.gmail.nossr50.enums.ExportFlags;
 import com.gmail.nossr50.tools.Exporter;
 
 import io.magicthegathering.javasdk.resource.Card;

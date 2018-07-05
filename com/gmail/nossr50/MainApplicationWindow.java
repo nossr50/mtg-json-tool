@@ -8,6 +8,7 @@ import org.eclipse.swt.widgets.Menu;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Timer;
 
 import org.eclipse.swt.SWT;
@@ -17,10 +18,12 @@ import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 
+import com.gmail.nossr50.datatypes.LegalFlags;
 import com.gmail.nossr50.enums.AppState;
 import com.gmail.nossr50.enums.ButtonType;
 import com.gmail.nossr50.enums.ExportType;
 import com.gmail.nossr50.enums.FieldType;
+import com.gmail.nossr50.enums.LegalTypes;
 import com.gmail.nossr50.enums.StyleFlags;
 import com.gmail.nossr50.enums.ExportFlags;
 import com.gmail.nossr50.runnables.DialogThread;
@@ -30,10 +33,12 @@ import com.gmail.nossr50.runnables.QueryThread;
 import com.gmail.nossr50.tools.CardImageManager;
 import com.gmail.nossr50.tools.ExportExample;
 import com.gmail.nossr50.tools.UpdateTimerTask;
+import com.sun.prism.paint.Color;
 
 import io.magicthegathering.javasdk.api.CardAPI;
 import io.magicthegathering.javasdk.api.SetAPI;
 import io.magicthegathering.javasdk.resource.Card;
+import io.magicthegathering.javasdk.resource.Legality;
 import io.magicthegathering.javasdk.resource.MtgSet;
 import io.magicthegathering.javasdk.resource.Ruling;
 
@@ -46,6 +51,8 @@ import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.wb.swt.SWTResourceManager;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 
 public class MainApplicationWindow {
 
@@ -53,7 +60,7 @@ public class MainApplicationWindow {
     private CardImageManager cardImageManager;
     
     private String appName  = "MTG JSON Tool";
-    private String ver      = "v0.00.05";
+    private String ver      = "v0.00.06";
     private String author   = "nossr50";
     
     public static int secondsPassed     = 0;
@@ -64,6 +71,8 @@ public class MainApplicationWindow {
     public static Timer timer;
     public static Label filter_lbl_header_note1;
     public static StyledText styledWarning;
+    
+    public static HashMap<Integer, Integer> legalityTracker;
     
     public static ExportExample exportExample;
     
@@ -111,6 +120,13 @@ public class MainApplicationWindow {
     private Text rt_flavour;
     private Text rt_rulings;
     
+    private Label result_lbl_block_legal;
+    private Label result_lbl_modern_legal;
+    private Label result_lbl_standard_legal;
+    private Label result_lbl_commander_legal;
+    private Label result_lbl_legacy_legal;
+    private Label result_lbl_vintage_legal;
+    
     /*
      * Buttons
      */
@@ -138,7 +154,7 @@ public class MainApplicationWindow {
     private Button btnCardText;
     private Button btnFlavourText;
     private Button btnArtist;
-    private Button btnLegalities;
+    private Button btnRulings;
     private Button btnRarity;
     private Button btnToughness;
     private Button btnPower;
@@ -219,6 +235,14 @@ public class MainApplicationWindow {
     private Label lblCustomExportPreview;
     private StyledText previewBuildWarning;
     private TabItem tbtmImport;
+    private Button btnManaCost;
+    private Button btnLegalities;
+    private Label lblLegalitiesbans;
+    private Label result_lbl_missingLegal;
+    private Text rt_manaCost;
+    private Label result_lbl_manaCost;
+    private Label lblStats_1;
+    private Button btnSimplifiedStats;
     
 
     /**
@@ -282,92 +306,91 @@ public class MainApplicationWindow {
         tabFilters.setControl(filterComp);
         
         ft_cardName = new Text(filterComp, SWT.BORDER);
-        ft_cardName.setBounds(378, 151, 250, 21);
+        ft_cardName.setBounds(690, 31, 250, 21);
         
         Label filter_lbl_cardName = new Label(filterComp, SWT.NONE);
-        filter_lbl_cardName.setBounds(306, 154, 66, 15);
+        filter_lbl_cardName.setBounds(618, 34, 66, 15);
         filter_lbl_cardName.setText("Card Name");
         
         Label filter_lbl_types = new Label(filterComp, SWT.NONE);
-        filter_lbl_types.setBounds(306, 202, 55, 15);
+        filter_lbl_types.setBounds(6, 130, 55, 15);
         filter_lbl_types.setText("Types");
         
         ft_types = new Text(filterComp, SWT.BORDER);
         ft_types.setText("Creature");
-        ft_types.setBounds(378, 199, 250, 21);
+        ft_types.setBounds(78, 127, 250, 21);
         
         ft_subTypes = new Text(filterComp, SWT.BORDER);
-        ft_subTypes.setBounds(378, 223, 250, 21);
+        ft_subTypes.setBounds(690, 55, 250, 21);
         
         ft_artist = new Text(filterComp, SWT.BORDER);
-        ft_artist.setBounds(378, 247, 250, 21);
+        ft_artist.setBounds(690, 79, 250, 21);
         
         Label filter_lbl_subTypes = new Label(filterComp, SWT.NONE);
         filter_lbl_subTypes.setText("Subtypes");
-        filter_lbl_subTypes.setBounds(306, 226, 55, 15);
+        filter_lbl_subTypes.setBounds(618, 58, 55, 15);
         
         Label filter_lbl_artist = new Label(filterComp, SWT.NONE);
         filter_lbl_artist.setText("Artist");
-        filter_lbl_artist.setBounds(306, 250, 55, 15);
+        filter_lbl_artist.setBounds(618, 82, 55, 15);
         
         Label filter_lbl_setName = new Label(filterComp, SWT.NONE);
         filter_lbl_setName.setText("Set Name");
-        filter_lbl_setName.setBounds(10, 34, 66, 15);
+        filter_lbl_setName.setBounds(6, 34, 66, 15);
         
         ft_setName = new Text(filterComp, SWT.BORDER);
-        ft_setName.setText("Dominaria");
-        ft_setName.setBounds(82, 31, 250, 21);
+        ft_setName.setText("Amonkhet");
+        ft_setName.setBounds(78, 31, 250, 21);
         
         Label filter_lbl_colors = new Label(filterComp, SWT.NONE);
         filter_lbl_colors.setText("Colors");
-        filter_lbl_colors.setBounds(10, 58, 55, 15);
+        filter_lbl_colors.setBounds(6, 58, 55, 15);
         
         ft_colors = new Text(filterComp, SWT.BORDER);
-        ft_colors.setBounds(82, 55, 250, 21);
+        ft_colors.setBounds(78, 55, 250, 21);
         
         Label filter_lbl_rarity = new Label(filterComp, SWT.NONE);
         filter_lbl_rarity.setText("Rarity");
-        filter_lbl_rarity.setBounds(10, 82, 55, 15);
+        filter_lbl_rarity.setBounds(6, 82, 55, 15);
         
         ft_rarity = new Text(filterComp, SWT.BORDER);
-        ft_rarity.setBounds(82, 79, 250, 21);
+        ft_rarity.setBounds(78, 79, 250, 21);
         
         Label filter_lbl_cmc = new Label(filterComp, SWT.NONE);
         filter_lbl_cmc.setText("CMC");
-        filter_lbl_cmc.setBounds(10, 106, 55, 15);
+        filter_lbl_cmc.setBounds(334, 82, 55, 15);
         
         ft_cmc = new Text(filterComp, SWT.BORDER);
-        ft_cmc.setBounds(82, 103, 250, 21);
+        ft_cmc.setBounds(406, 79, 206, 21);
         
         Label filter_lbl_power = new Label(filterComp, SWT.NONE);
         filter_lbl_power.setText("Power");
-        filter_lbl_power.setBounds(306, 274, 66, 15);
+        filter_lbl_power.setBounds(334, 34, 66, 15);
         
         ft_power = new Text(filterComp, SWT.BORDER);
-        ft_power.setBounds(378, 271, 250, 21);
+        ft_power.setBounds(406, 31, 206, 21);
         
         Label filter_lbl_toughness = new Label(filterComp, SWT.NONE);
         filter_lbl_toughness.setText("Toughness");
-        filter_lbl_toughness.setBounds(306, 298, 66, 15);
+        filter_lbl_toughness.setBounds(334, 58, 66, 15);
         
         ft_toughness = new Text(filterComp, SWT.BORDER);
-        ft_toughness.setBounds(378, 295, 250, 21);
+        ft_toughness.setBounds(406, 55, 206, 21);
         
         Label filter_lbl_header_generic = new Label(filterComp, SWT.CENTER);
-        filter_lbl_header_generic.setBounds(82, 10, 250, 15);
+        filter_lbl_header_generic.setBounds(78, 10, 250, 15);
         filter_lbl_header_generic.setText("Generic");
         
         Label filter_lbl_header_specific = new Label(filterComp, SWT.CENTER);
-        filter_lbl_header_specific.setBounds(378, 130, 250, 15);
+        filter_lbl_header_specific.setBounds(690, 10, 250, 15);
         filter_lbl_header_specific.setText("Specific");
         
         Label filter_lbl_supertypes = new Label(filterComp, SWT.NONE);
         filter_lbl_supertypes.setText("Supertypes");
-        filter_lbl_supertypes.setBounds(306, 178, 66, 15);
+        filter_lbl_supertypes.setBounds(6, 106, 66, 15);
         
         ft_superTypes = new Text(filterComp, SWT.BORDER);
-        ft_superTypes.setText("Legendary");
-        ft_superTypes.setBounds(378, 175, 250, 21);
+        ft_superTypes.setBounds(78, 103, 250, 21);
         
         Group grpPresets = new Group(filterComp, SWT.NONE);
         grpPresets.setText("Presets");
@@ -444,9 +467,16 @@ public class MainApplicationWindow {
         frarity_set.setText("Set");
         frarity_set.setBounds(336, 255, 86, 25);
         
+        previewBuildWarning = new StyledText(grpPresets, SWT.BORDER | SWT.READ_ONLY | SWT.WRAP);
+        previewBuildWarning.setBounds(591, 240, 352, 64);
+        previewBuildWarning.setSelectionForeground(SWTResourceManager.getColor(SWT.COLOR_RED));
+        previewBuildWarning.setSelectionBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
+        previewBuildWarning.setText("NOTE: This is a preview build of an application still in development, if you find any bugs please post them here https://github.com/nossr50/mtg-json-tool/issues");
+        previewBuildWarning.setSelection(0, 4);
+        
         Group grpQuery = new Group(filterComp, SWT.NONE);
         grpQuery.setText("Query");
-        grpQuery.setBounds(10, 151, 278, 114);
+        grpQuery.setBounds(345, 178, 278, 114);
         
         filter_lbl_header_note1 = new Label(grpQuery, SWT.NONE);
         filter_lbl_header_note1.setAlignment(SWT.CENTER);
@@ -481,15 +511,12 @@ public class MainApplicationWindow {
         styledWarning.setSelectionBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
         styledWarning.setSelectionForeground(SWTResourceManager.getColor(255, 0, 0));
         styledWarning.setText("[WARNING] You are doing a generic query which can return thousands of cards, this can take a very long time to finish!");
-        styledWarning.setBounds(10, 274, 278, 59);
+        styledWarning.setBounds(50, 209, 278, 59);
         styledWarning.setVisible(false);
         
-        previewBuildWarning = new StyledText(filterComp, SWT.BORDER | SWT.READ_ONLY | SWT.WRAP);
-        previewBuildWarning.setSelectionForeground(SWTResourceManager.getColor(SWT.COLOR_RED));
-        previewBuildWarning.setSelectionBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
-        previewBuildWarning.setText("NOTE: This is a preview build of an application still in development, if you find any bugs please post them here https://github.com/nossr50/mtg-json-tool/issues");
-        previewBuildWarning.setBounds(607, 10, 352, 64);
-        previewBuildWarning.setSelection(0, 4);
+        lblStats_1 = new Label(filterComp, SWT.CENTER);
+        lblStats_1.setText("Stats");
+        lblStats_1.setBounds(406, 10, 206, 15);
         
         //queryProgressBar.setMaximum(5);
         //queryProgressBar.setSelection(1);
@@ -505,87 +532,87 @@ public class MainApplicationWindow {
         
         Label result_lbl_setName = new Label(resultComp, SWT.NONE);
         result_lbl_setName.setText("Set Name");
-        result_lbl_setName.setBounds(316, 386, 66, 15);
+        result_lbl_setName.setBounds(316, 474, 66, 15);
         
         Label result_lbl_colors = new Label(resultComp, SWT.NONE);
         result_lbl_colors.setText("Colors");
-        result_lbl_colors.setBounds(316, 410, 55, 15);
+        result_lbl_colors.setBounds(316, 498, 55, 15);
         
         Label result_lbl_rarity = new Label(resultComp, SWT.NONE);
         result_lbl_rarity.setText("Rarity");
-        result_lbl_rarity.setBounds(316, 458, 55, 15);
+        result_lbl_rarity.setBounds(316, 546, 55, 15);
         
         Label result_lbl_cmc = new Label(resultComp, SWT.NONE);
         result_lbl_cmc.setText("CMC");
-        result_lbl_cmc.setBounds(316, 434, 55, 15);
+        result_lbl_cmc.setBounds(644, 519, 55, 15);
         
         rt_setName = new Text(resultComp, SWT.BORDER);
-        rt_setName.setBounds(388, 383, 250, 21);
+        rt_setName.setBounds(388, 471, 250, 21);
         
         rt_colors = new Text(resultComp, SWT.BORDER);
-        rt_colors.setBounds(388, 407, 250, 21);
+        rt_colors.setBounds(388, 495, 250, 21);
         
         rt_rarity = new Text(resultComp, SWT.BORDER);
-        rt_rarity.setBounds(388, 455, 250, 21);
+        rt_rarity.setBounds(388, 543, 250, 21);
         
         rt_cmc = new Text(resultComp, SWT.BORDER);
-        rt_cmc.setBounds(388, 431, 250, 21);
+        rt_cmc.setBounds(716, 516, 250, 21);
         
         Label result_lbl_cardName = new Label(resultComp, SWT.NONE);
         result_lbl_cardName.setText("Card Name");
-        result_lbl_cardName.setBounds(316, 362, 66, 15);
+        result_lbl_cardName.setBounds(316, 450, 66, 15);
         
         rt_cardName = new Text(resultComp, SWT.BORDER);
-        rt_cardName.setBounds(388, 359, 250, 21);
+        rt_cardName.setBounds(388, 447, 250, 21);
         
         Label result_lbl_types = new Label(resultComp, SWT.NONE);
         result_lbl_types.setText("Types");
-        result_lbl_types.setBounds(644, 383, 55, 15);
+        result_lbl_types.setBounds(644, 471, 55, 15);
         
         rt_types = new Text(resultComp, SWT.BORDER);
-        rt_types.setBounds(716, 380, 250, 21);
+        rt_types.setBounds(716, 468, 250, 21);
         
         Label result_lbl_subTypes = new Label(resultComp, SWT.NONE);
         result_lbl_subTypes.setText("Subtypes");
-        result_lbl_subTypes.setBounds(644, 407, 55, 15);
+        result_lbl_subTypes.setBounds(644, 495, 55, 15);
         
         rt_subTypes = new Text(resultComp, SWT.BORDER);
-        rt_subTypes.setBounds(716, 404, 250, 21);
+        rt_subTypes.setBounds(716, 492, 250, 21);
         
         Label result_lbl_artist = new Label(resultComp, SWT.NONE);
         result_lbl_artist.setText("Artist");
-        result_lbl_artist.setBounds(644, 490, 55, 15);
+        result_lbl_artist.setBounds(644, 578, 55, 15);
         
         rt_artist = new Text(resultComp, SWT.BORDER);
-        rt_artist.setBounds(716, 487, 250, 21);
+        rt_artist.setBounds(716, 575, 250, 21);
         
         Label result_lbl_power = new Label(resultComp, SWT.NONE);
         result_lbl_power.setText("Power");
-        result_lbl_power.setBounds(316, 490, 66, 15);
+        result_lbl_power.setBounds(316, 578, 66, 15);
         
         rt_power = new Text(resultComp, SWT.BORDER);
-        rt_power.setBounds(388, 487, 250, 21);
+        rt_power.setBounds(388, 575, 250, 21);
         
         Label result_lbl_toughness = new Label(resultComp, SWT.NONE);
         result_lbl_toughness.setText("Toughness");
-        result_lbl_toughness.setBounds(316, 514, 66, 15);
+        result_lbl_toughness.setBounds(316, 602, 66, 15);
         
         rt_toughness = new Text(resultComp, SWT.BORDER);
-        rt_toughness.setBounds(388, 511, 250, 21);
+        rt_toughness.setBounds(388, 599, 250, 21);
         
         Label result_lbl_artURL = new Label(resultComp, SWT.NONE);
         result_lbl_artURL.setText("Art URL");
-        result_lbl_artURL.setBounds(644, 514, 66, 15);
+        result_lbl_artURL.setBounds(644, 602, 66, 15);
         
         rt_artURL = new Text(resultComp, SWT.BORDER);
-        rt_artURL.setBounds(716, 511, 250, 21);
+        rt_artURL.setBounds(716, 599, 250, 21);
         
         Label result_lbl_supertypes = new Label(resultComp, SWT.NONE);
         result_lbl_supertypes.setText("Supertypes");
-        result_lbl_supertypes.setBounds(644, 359, 66, 15);
+        result_lbl_supertypes.setBounds(644, 447, 66, 15);
         
         rt_supertypes = new Text(resultComp, SWT.BORDER);
-        rt_supertypes.setBounds(716, 356, 250, 21);
+        rt_supertypes.setBounds(716, 444, 250, 21);
         
         rt_btn_export = new Button(resultComp, SWT.NONE);
         rt_btn_export.setBounds(10, 626, 107, 25);
@@ -677,7 +704,7 @@ public class MainApplicationWindow {
         
         Group grpCard = new Group(resultComp, SWT.NONE);
         grpCard.setText("Card");
-        grpCard.setBounds(316, 10, 643, 340);
+        grpCard.setBounds(316, 10, 643, 425);
         
         Composite cardArtCanvas = new Composite(grpCard, SWT.NONE);
         cardArtCanvas.setLocation(10, 19);
@@ -707,8 +734,80 @@ public class MainApplicationWindow {
         rt_rulings.setBounds(236, 223, 322, 93);
         
         Label result_lbl_cardRulings = new Label(grpCard, SWT.NONE);
-        result_lbl_cardRulings.setText("Rulings / Legalities");
+        result_lbl_cardRulings.setText("Rulings");
         result_lbl_cardRulings.setBounds(237, 205, 321, 15);
+        
+        lblLegalitiesbans = new Label(grpCard, SWT.NONE);
+        lblLegalitiesbans.setAlignment(SWT.CENTER);
+        lblLegalitiesbans.setText("Legalities (Bans)");
+        lblLegalitiesbans.setBounds(10, 336, 282, 15);
+        
+        Label result_lbl_standard_pre = new Label(grpCard, SWT.NONE);
+        result_lbl_standard_pre.setBounds(10, 353, 83, 15);
+        result_lbl_standard_pre.setText("Standard:");
+        
+        result_lbl_standard_legal = new Label(grpCard, SWT.NONE);
+        result_lbl_standard_legal.setForeground(SWTResourceManager.getColor(128, 128, 128));
+        result_lbl_standard_legal.setBounds(99, 353, 55, 15);
+        result_lbl_standard_legal.setText("??");
+        
+        result_lbl_modern_legal = new Label(grpCard, SWT.NONE);
+        result_lbl_modern_legal.setText("??");
+        result_lbl_modern_legal.setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_GRAY));
+        result_lbl_modern_legal.setBounds(99, 374, 55, 15);
+        
+        Label result_lbl_modern_pre = new Label(grpCard, SWT.NONE);
+        result_lbl_modern_pre.setText("Modern:");
+        result_lbl_modern_pre.setBounds(10, 374, 83, 15);
+        
+        result_lbl_commander_legal = new Label(grpCard, SWT.NONE);
+        result_lbl_commander_legal.setText("??");
+        result_lbl_commander_legal.setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_GRAY));
+        result_lbl_commander_legal.setBounds(99, 395, 55, 15);
+        
+        Label result_lbl_commander_pre = new Label(grpCard, SWT.NONE);
+        result_lbl_commander_pre.setText("Commander:");
+        result_lbl_commander_pre.setBounds(10, 395, 83, 15);
+        
+        result_lbl_legacy_legal = new Label(grpCard, SWT.NONE);
+        result_lbl_legacy_legal.setText("??");
+        result_lbl_legacy_legal.setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_GRAY));
+        result_lbl_legacy_legal.setBounds(249, 353, 55, 15);
+        
+        Label result_lbl_legacy_pre = new Label(grpCard, SWT.NONE);
+        result_lbl_legacy_pre.setText("Legacy:");
+        result_lbl_legacy_pre.setBounds(160, 353, 83, 15);
+        
+        result_lbl_vintage_legal = new Label(grpCard, SWT.NONE);
+        result_lbl_vintage_legal.setText("??");
+        result_lbl_vintage_legal.setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_GRAY));
+        result_lbl_vintage_legal.setBounds(249, 374, 55, 15);
+        
+        Label result_lbl_vintage_pre = new Label(grpCard, SWT.NONE);
+        result_lbl_vintage_pre.setText("Vintage:");
+        result_lbl_vintage_pre.setBounds(160, 374, 83, 15);
+        
+        Label result_lbl_block_pre = new Label(grpCard, SWT.NONE);
+        result_lbl_block_pre.setText("Block:");
+        result_lbl_block_pre.setBounds(160, 395, 83, 15);
+        
+        result_lbl_block_legal = new Label(grpCard, SWT.NONE);
+        result_lbl_block_legal.setText("??");
+        result_lbl_block_legal.setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_GRAY));
+        result_lbl_block_legal.setBounds(249, 395, 55, 15);
+        
+        result_lbl_missingLegal = new Label(grpCard, SWT.WRAP);
+        result_lbl_missingLegal.setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_GRAY));
+        result_lbl_missingLegal.setBounds(310, 353, 323, 62);
+        result_lbl_missingLegal.setText("Some cards in the mtg-json.com database have missing legalities, this is not something I can fix on my end. I'm told they are working on fixing it.");
+        result_lbl_missingLegal.setVisible(false);
+        
+        rt_manaCost = new Text(resultComp, SWT.BORDER);
+        rt_manaCost.setBounds(388, 519, 250, 21);
+        
+        result_lbl_manaCost = new Label(resultComp, SWT.NONE);
+        result_lbl_manaCost.setText("Mana Cost");
+        result_lbl_manaCost.setBounds(316, 522, 66, 15);
         
         tbtmAdvancedExport = new TabItem(tabFolder, SWT.NONE);
         tbtmAdvancedExport.setText("Advanced Export");
@@ -730,7 +829,7 @@ public class MainApplicationWindow {
         
         Group grpCustomExport = new Group(composite, SWT.NONE);
         grpCustomExport.setText("Custom Export");
-        grpCustomExport.setBounds(187, 10, 590, 197);
+        grpCustomExport.setBounds(187, 10, 590, 227);
         
         btnCardName = new Button(grpCustomExport, SWT.CHECK);
         btnCardName.setBounds(10, 52, 93, 16);
@@ -768,23 +867,23 @@ public class MainApplicationWindow {
         btnCmc.setSelection(true);
         
         btnPower = new Button(grpCustomExport, SWT.CHECK);
-        btnPower.setBounds(208, 96, 78, 16);
+        btnPower.setBounds(208, 114, 78, 16);
         btnPower.setText("Power");
         btnPower.setSelection(true);
         
         btnToughness = new Button(grpCustomExport, SWT.CHECK);
-        btnToughness.setBounds(208, 118, 78, 16);
+        btnToughness.setBounds(208, 136, 78, 16);
         btnToughness.setText("Toughness");
         btnToughness.setSelection(true);
         
         btnRarity = new Button(grpCustomExport, SWT.CHECK);
-        btnRarity.setBounds(208, 140, 78, 16);
+        btnRarity.setBounds(208, 158, 78, 16);
         btnRarity.setText("Rarity");
         btnRarity.setSelection(true);
         
-        btnLegalities = new Button(grpCustomExport, SWT.CHECK);
-        btnLegalities.setBounds(307, 114, 93, 16);
-        btnLegalities.setText("Legalities");
+        btnRulings = new Button(grpCustomExport, SWT.CHECK);
+        btnRulings.setBounds(307, 114, 93, 16);
+        btnRulings.setText("Rulings");
         
         btnArtist = new Button(grpCustomExport, SWT.CHECK);
         btnArtist.setBounds(307, 92, 93, 16);
@@ -809,7 +908,7 @@ public class MainApplicationWindow {
         btnLabelBasics.setSelection(true);
         
         btnCustomExport = new Button(grpCustomExport, SWT.NONE);
-        btnCustomExport.setBounds(109, 162, 291, 25);
+        btnCustomExport.setBounds(109, 192, 291, 25);
         btnCustomExport.setText("Custom Export");
         
         rt_btn_export.addListener(SWT.Selection, listener_export);
@@ -849,16 +948,30 @@ public class MainApplicationWindow {
         btnSpacingExtras = new Button(grpCustomExport, SWT.CHECK);
         btnSpacingExtras.setText("Empty lines between Extras");
         btnSpacingExtras.setSelection(true);
-        btnSpacingExtras.setBounds(406, 140, 163, 16);
+        btnSpacingExtras.setBounds(406, 136, 163, 16);
+        
+        btnManaCost = new Button(grpCustomExport, SWT.CHECK);
+        btnManaCost.setText("Mana Cost");
+        btnManaCost.setSelection(true);
+        btnManaCost.setBounds(208, 96, 78, 16);
+        
+        btnLegalities = new Button(grpCustomExport, SWT.CHECK);
+        btnLegalities.setText("Legalities");
+        btnLegalities.setBounds(307, 136, 93, 16);
+        
+        btnSimplifiedStats = new Button(grpCustomExport, SWT.CHECK);
+        btnSimplifiedStats.setText("Simplified Stats");
+        btnSimplifiedStats.setSelection(true);
+        btnSimplifiedStats.setBounds(406, 158, 163, 16);
         
         exportExample = new ExportExample();
         
         customExportPreview = new Text(composite, SWT.BORDER | SWT.READ_ONLY | SWT.H_SCROLL | SWT.V_SCROLL | SWT.CANCEL);
-        customExportPreview.setBounds(10, 234, 949, 417);
+        customExportPreview.setBounds(10, 264, 949, 387);
         customExportPreview.setText(exportExample.getExample(getExportFlags(), getStyleFlags()));
         
         lblCustomExportPreview = new Label(composite, SWT.NONE);
-        lblCustomExportPreview.setBounds(10, 213, 590, 15);
+        lblCustomExportPreview.setBounds(10, 243, 590, 15);
         lblCustomExportPreview.setText("Custom Export Preview");
         
         tbtmImport = new TabItem(tabFolder, SWT.NONE);
@@ -930,7 +1043,7 @@ public class MainApplicationWindow {
         btnCardText.addListener(SWT.Selection, listener_custom_export_flags);
         btnFlavourText.addListener(SWT.Selection, listener_custom_export_flags);
         btnArtist.addListener(SWT.Selection, listener_custom_export_flags);
-        btnLegalities.addListener(SWT.Selection, listener_custom_export_flags);
+        btnRulings.addListener(SWT.Selection, listener_custom_export_flags);
         btnToughness.addListener(SWT.Selection, listener_custom_export_flags);
         btnPower.addListener(SWT.Selection, listener_custom_export_flags);
         btnCmc.addListener(SWT.Selection, listener_custom_export_flags);
@@ -940,7 +1053,10 @@ public class MainApplicationWindow {
         btnSetName.addListener(SWT.Selection, listener_custom_export_flags);
         btnCardName.addListener(SWT.Selection, listener_custom_export_flags);
         btnColors.addListener(SWT.Selection, listener_custom_export_flags);
+        btnManaCost.addListener(SWT.Selection, listener_custom_export_flags);
         btnSpacingExtras.addListener(SWT.Selection, listener_custom_export_flags);
+        btnLegalities.addListener(SWT.Selection, listener_custom_export_flags);
+        btnSimplifiedStats.addListener(SWT.Selection, listener_custom_export_flags);
         
         btnSimpleExport.addListener(SWT.Selection, listener_simple_export);
     }
@@ -1078,12 +1194,15 @@ public class MainApplicationWindow {
         fdrop_rarity.update();
     }
     
-    private void updateResultFields(int selectionIndex)
+    synchronized private void updateResultFields(int selectionIndex)
     {
         Card curCard = results.get(selectionIndex);
         
         if(curCard != null)
         {
+            //Legalities
+            updateLegalities(curCard.getMultiverseid());
+            
             //Set Name
             updateResultField(rt_setName, curCard.getSetName());
             
@@ -1095,6 +1214,9 @@ public class MainApplicationWindow {
             
             //CMC
             updateResultField(rt_cmc, Double.toString(curCard.getCmc()));
+            
+            //Mana Cost
+            updateResultField(rt_manaCost, curCard.getManaCost());
             
             //Card Name
             updateResultField(rt_cardName, curCard.getName());
@@ -1126,7 +1248,7 @@ public class MainApplicationWindow {
             //Flavour Text
             updateResultField(rt_flavour, curCard.getFlavor());
             
-            //Rulings & Legalities
+            //Rulings
             if(curCard.getRulings() != null && curCard.getRulings().length > 0)
                 updateResultField(rt_rulings, curCard.getRulings());
             else
@@ -1154,6 +1276,119 @@ public class MainApplicationWindow {
             } else {
                 cardImageManager.setVisibility(false);
             }
+        }
+    }
+    
+    public static void initLegalities()
+    {
+        if(legalityTracker == null)
+            legalityTracker = new HashMap<Integer, Integer>();
+        
+        System.out.println("Updating Legalities...");
+        
+        for(Card curCard : results)
+        {
+            //To keep track of whether or not we've found legality for this card
+            HashMap<LegalTypes, Boolean> legalityMap = new HashMap<LegalTypes, Boolean>();
+            
+            for(LegalTypes lt : LegalTypes.values()) {
+                legalityMap.put(lt, false);
+                System.out.println(lt.toString() +" : "+legalityMap.get(lt));
+            }
+            
+            int legality = 0;
+            
+            for(LegalTypes lt : LegalTypes.values()) {
+                for(Legality leg : curCard.getLegalities())
+                {
+                    if(leg.getFormat().toString().contains(lt.toString()))
+                    {
+                        //Only flag a card as having found legality if it matches Legal or Banned
+                        if(leg.getLegality().toString().contains("Legal"))
+                        {
+                            legality = legality | lt.getLegalityFlag();
+                            legalityMap.put(lt, true); //Tracking for whether or not we have a missing legality
+                        } 
+                        
+                        else if (leg.getLegality().toString().contains("Banned"))
+                        {
+                            legalityMap.put(lt, true); //Tracking for whether or not we have a missing legality
+                        }
+                    }
+                }
+                
+                   
+            }
+            
+            //If a card is missing legality we flag it
+            for(LegalTypes lt : LegalTypes.values())
+            {
+                if(legalityMap.get(lt) == false)
+                {
+                    legality = legality | lt.getMissingFlag();
+                }
+            }
+            
+            //Put it in the tracker
+            legalityTracker.put(curCard.getMultiverseid(), legality);
+        }
+    }
+    
+    synchronized private void updateLegalities(int cardMultiverseId)
+    {
+        boolean missingNoticeVisible = false;
+        
+        for(LegalTypes lt : LegalTypes.values())
+        {
+            int curFlags = legalityTracker.get(cardMultiverseId);
+            
+            if(curFlags > 0)
+            {
+                
+                if(LegalFlags.isLegal(curFlags, lt.getLegalityFlag()))
+                {
+                    getLegalityLabel(lt).setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_GREEN));
+                    getLegalityLabel(lt).setText("LEGAL");
+                } else {
+                    
+                    if(LegalFlags.isLegal(curFlags, lt.getMissingFlag()))
+                    {
+                        getLegalityLabel(lt).setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_GRAY));
+                        getLegalityLabel(lt).setText("??");
+                        missingNoticeVisible = true;
+                    } else {
+                        getLegalityLabel(lt).setForeground(SWTResourceManager.getColor(SWT.COLOR_RED));
+                        getLegalityLabel(lt).setText("BANNED");
+                    }
+                }
+            }
+            //Update label
+            getLegalityLabel(lt).update();
+        }
+        
+        //Only show the notice if the card has missing legalities
+        result_lbl_missingLegal.setVisible(missingNoticeVisible);
+        result_lbl_missingLegal.update();
+    }
+    
+    private Label getLegalityLabel(LegalTypes lt)
+    {
+        switch(lt)
+        {
+        case BLOCK:
+            return result_lbl_block_legal;
+        case COMMANDER:
+            return result_lbl_commander_legal;
+        case LEGACY:
+            return result_lbl_legacy_legal;
+        case MODERN:
+            return result_lbl_modern_legal;
+        case STANDARD:
+            return result_lbl_standard_legal;
+        case VINTAGE:
+            return result_lbl_vintage_legal;
+        default:
+            return null;
         }
     }
     
@@ -1212,6 +1447,8 @@ public class MainApplicationWindow {
         resultField.update();
     }
     
+    
+    
     private void simpleExportButtonPressed()
     {
         if(rt_btn_export.isEnabled())
@@ -1267,8 +1504,8 @@ public class MainApplicationWindow {
         if(btnArtist.getSelection())
             flags = flags | ExportFlags.ARTIST;
         
-        if(btnLegalities.getSelection())
-            flags = flags | ExportFlags.LEGALITIES;
+        if(btnRulings.getSelection())
+            flags = flags | ExportFlags.RULINGS;
         
         if(btnRarity.getSelection())
             flags = flags | ExportFlags.RARITY;
@@ -1300,6 +1537,12 @@ public class MainApplicationWindow {
         if(btnColors.getSelection())
             flags = flags | ExportFlags.COLORS;
         
+        if(btnManaCost.getSelection())
+            flags = flags | ExportFlags.MANACOST;
+        
+        if(btnLegalities.getSelection())
+            flags = flags | ExportFlags.LEGALITIES;
+        
         return flags;
     }
     
@@ -1321,6 +1564,9 @@ public class MainApplicationWindow {
         
         if(btnHeaders.getSelection())
             flags = flags | StyleFlags.HEADERS;
+        
+        if(btnSimplifiedStats.getSelection())
+            flags = flags | StyleFlags.SIMPLIFIED_STATS;
         
         return flags;
     }
