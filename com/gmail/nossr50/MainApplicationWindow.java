@@ -18,14 +18,15 @@ import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 
-import com.gmail.nossr50.datatypes.LegalFlags;
 import com.gmail.nossr50.enums.AppState;
 import com.gmail.nossr50.enums.ButtonType;
 import com.gmail.nossr50.enums.ExportType;
 import com.gmail.nossr50.enums.FieldType;
 import com.gmail.nossr50.enums.LegalTypes;
-import com.gmail.nossr50.enums.StyleFlags;
-import com.gmail.nossr50.enums.ExportFlags;
+import com.gmail.nossr50.flags.ExportFlags;
+import com.gmail.nossr50.flags.LegalFlags;
+import com.gmail.nossr50.flags.QueryFlags;
+import com.gmail.nossr50.flags.StyleFlags;
 import com.gmail.nossr50.runnables.DialogThread;
 import com.gmail.nossr50.runnables.ExportThread;
 import com.gmail.nossr50.runnables.QueryThread;
@@ -33,8 +34,6 @@ import com.gmail.nossr50.runnables.QueryThread;
 import com.gmail.nossr50.tools.CardImageManager;
 import com.gmail.nossr50.tools.ExportExample;
 import com.gmail.nossr50.tools.UpdateTimerTask;
-import com.sun.prism.paint.Color;
-
 import io.magicthegathering.javasdk.api.CardAPI;
 import io.magicthegathering.javasdk.api.SetAPI;
 import io.magicthegathering.javasdk.resource.Card;
@@ -51,8 +50,6 @@ import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.ProgressBar;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.wb.swt.SWTResourceManager;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
 
 public class MainApplicationWindow {
 
@@ -60,7 +57,7 @@ public class MainApplicationWindow {
     private CardImageManager cardImageManager;
     
     private String appName  = "MTG JSON Tool";
-    private String ver      = "v0.00.06";
+    private String ver      = "v0.00.07";
     private String author   = "nossr50";
     
     public static int secondsPassed     = 0;
@@ -132,7 +129,8 @@ public class MainApplicationWindow {
      */
     
     //Buttons that do something complicated
-    private static Button filter_btn_fetch;
+    private static Button filter_btn_newSearch;
+    private static Button filter_btn_additiveSearch;
     private static Button rt_btn_export;
     private static Button btnCustomExport;
     private static Button filter_btn_clear;
@@ -178,6 +176,7 @@ public class MainApplicationWindow {
      */
     
     private Listener listener_fetch;
+    private Listener listener_additive_search;
     private Listener listener_export;
     private Listener listener_custom_export;
     private Listener listener_clear;
@@ -206,7 +205,7 @@ public class MainApplicationWindow {
     /*
      * Other vars
      */
-    public static ArrayList<Card> results;
+    public static HashMap<Integer, Card> results;
     public static AppState curState = AppState.IDLE;
     
     /*
@@ -243,6 +242,7 @@ public class MainApplicationWindow {
     private Label result_lbl_manaCost;
     private Label lblStats_1;
     private Button btnSimplifiedStats;
+
     
 
     /**
@@ -339,7 +339,7 @@ public class MainApplicationWindow {
         filter_lbl_setName.setBounds(6, 34, 66, 15);
         
         ft_setName = new Text(filterComp, SWT.BORDER);
-        ft_setName.setText("Amonkhet");
+        ft_setName.setText("Amonkhet, Ixalan, Dominaria");
         ft_setName.setBounds(78, 31, 250, 21);
         
         Label filter_lbl_colors = new Label(filterComp, SWT.NONE);
@@ -480,15 +480,15 @@ public class MainApplicationWindow {
         
         filter_lbl_header_note1 = new Label(grpQuery, SWT.NONE);
         filter_lbl_header_note1.setAlignment(SWT.CENTER);
-        filter_lbl_header_note1.setBounds(10, 37, 258, 15);
+        filter_lbl_header_note1.setBounds(10, 16, 258, 15);
         filter_lbl_header_note1.setText("Tip: Fields can be blank!");
         
-        filter_btn_fetch = new Button(grpQuery, SWT.NONE);
-        filter_btn_fetch.setBounds(10, 71, 116, 25);
-        filter_btn_fetch.setText("Fetch Results");
+        filter_btn_newSearch = new Button(grpQuery, SWT.NONE);
+        filter_btn_newSearch.setBounds(10, 71, 116, 25);
+        filter_btn_newSearch.setText("New Search");
         
         filter_btn_clear = new Button(grpQuery, SWT.NONE);
-        filter_btn_clear.setBounds(152, 71, 116, 25);
+        filter_btn_clear.setBounds(81, 37, 116, 25);
         filter_btn_clear.setText("Clear Fields");
         
         queryProgressBar = new ProgressBar(grpQuery, SWT.INDETERMINATE | SWT.SMOOTH | SWT.HORIZONTAL);
@@ -506,6 +506,11 @@ public class MainApplicationWindow {
         filter_lbl_progressBar.setAlignment(SWT.CENTER);
         filter_lbl_progressBar.setText("Querying mtg-json.com DB...");
         filter_lbl_progressBar.setVisible(false);
+        
+        filter_btn_additiveSearch = new Button(grpQuery, SWT.NONE);
+        filter_btn_additiveSearch.setText("Additive Search");
+        filter_btn_additiveSearch.setBounds(152, 71, 116, 25);
+        filter_btn_additiveSearch.setEnabled(false);
         
         styledWarning = new StyledText(filterComp, SWT.BORDER | SWT.WRAP);
         styledWarning.setSelectionBackground(SWTResourceManager.getColor(SWT.COLOR_TRANSPARENT));
@@ -670,12 +675,24 @@ public class MainApplicationWindow {
             }
         };
         
+        listener_additive_search = new Listener() {
+            public void handleEvent(Event e) {
+                switch (e.type) {
+                case SWT.Selection:
+                {
+                    fetchButtonPressed(QueryFlags.ADDITIVE_SEARCH);
+                    break;
+                }
+                }
+            }
+        };
+        
         listener_fetch = new Listener() {
             public void handleEvent(Event e) {
                 switch (e.type) {
                 case SWT.Selection:
                 {
-                    fetchButtonPressed();
+                    fetchButtonPressed(QueryFlags.CLEAR_SEARCH);
                     break;
                 }
                 }
@@ -914,7 +931,8 @@ public class MainApplicationWindow {
         rt_btn_export.addListener(SWT.Selection, listener_export);
         btnCustomExport.addListener(SWT.Selection, listener_custom_export);
         filter_btn_clear.addListener(SWT.Selection, listener_clear);
-        filter_btn_fetch.addListener(SWT.Selection, listener_fetch);
+        filter_btn_newSearch.addListener(SWT.Selection, listener_fetch);
+        filter_btn_additiveSearch.addListener(SWT.Selection, listener_additive_search);
         
         styledWarning.setSelection(0, 9);
         styledWarning.update();
@@ -1196,7 +1214,7 @@ public class MainApplicationWindow {
     
     synchronized private void updateResultFields(int selectionIndex)
     {
-        Card curCard = results.get(selectionIndex);
+        Card curCard = (Card) results.values().toArray()[selectionIndex];
         
         if(curCard != null)
         {
@@ -1279,14 +1297,14 @@ public class MainApplicationWindow {
         }
     }
     
-    public static void initLegalities()
+    synchronized public static void initLegalities()
     {
         if(legalityTracker == null)
             legalityTracker = new HashMap<Integer, Integer>();
         
         System.out.println("Updating Legalities...");
         
-        for(Card curCard : results)
+        for(Card curCard : results.values())
         {
             //To keep track of whether or not we've found legality for this card
             HashMap<LegalTypes, Boolean> legalityMap = new HashMap<LegalTypes, Boolean>();
@@ -1299,23 +1317,24 @@ public class MainApplicationWindow {
             int legality = 0;
             
             for(LegalTypes lt : LegalTypes.values()) {
-                for(Legality leg : curCard.getLegalities())
-                {
-                    if(leg.getFormat().toString().contains(lt.toString()))
+                if(curCard.getLegalities() != null)
+                    for(Legality leg : curCard.getLegalities())
                     {
-                        //Only flag a card as having found legality if it matches Legal or Banned
-                        if(leg.getLegality().toString().contains("Legal"))
+                        if(leg.getFormat().toString().contains(lt.toString()))
                         {
-                            legality = legality | lt.getLegalityFlag();
-                            legalityMap.put(lt, true); //Tracking for whether or not we have a missing legality
-                        } 
-                        
-                        else if (leg.getLegality().toString().contains("Banned"))
-                        {
-                            legalityMap.put(lt, true); //Tracking for whether or not we have a missing legality
+                            //Only flag a card as having found legality if it matches Legal or Banned
+                            if(leg.getLegality().toString().contains("Legal"))
+                            {
+                                legality = legality | lt.getLegalityFlag();
+                                legalityMap.put(lt, true); //Tracking for whether or not we have a missing legality
+                            } 
+                            
+                            else if (leg.getLegality().toString().contains("Banned"))
+                            {
+                                legalityMap.put(lt, true); //Tracking for whether or not we have a missing legality
+                            }
                         }
                     }
-                }
                 
                    
             }
@@ -1454,7 +1473,7 @@ public class MainApplicationWindow {
         if(rt_btn_export.isEnabled())
         {
             //Executes the Export script in a new thread
-            ExportThread et = new ExportThread(results, ExportType.SIMPLE, ExportFlags.NAMES, StyleFlags.NOFLAGS);
+            ExportThread et = new ExportThread((ArrayList<Card>) results.values(), ExportType.SIMPLE, ExportFlags.NAMES, StyleFlags.NOFLAGS);
             Thread thread = new Thread(et);
 
             thread.start();
@@ -1466,7 +1485,7 @@ public class MainApplicationWindow {
         if(rt_btn_export.isEnabled())
         {
             //Executes the Export script in a new thread
-            ExportThread et = new ExportThread(results, ExportType.STANDARD, ExportFlags.NOFLAGS, StyleFlags.NOFLAGS);
+            ExportThread et = new ExportThread((ArrayList<Card>) results.values(), ExportType.STANDARD, ExportFlags.NOFLAGS, StyleFlags.NOFLAGS);
             Thread thread = new Thread(et);
 
             thread.start();
@@ -1478,7 +1497,7 @@ public class MainApplicationWindow {
         if(btnCustomExport.isEnabled())
         {
             //Executes the Export script in a new thread with custom flags
-            ExportThread et = new ExportThread(results, ExportType.CUSTOM, getExportFlags(), getStyleFlags());
+            ExportThread et = new ExportThread((ArrayList<Card>) results.values(), ExportType.CUSTOM, getExportFlags(), getStyleFlags());
             Thread thread = new Thread(et);
 
             thread.start();
@@ -1601,12 +1620,12 @@ public class MainApplicationWindow {
         }
     }
     
-    private void fetchButtonPressed()
+    private void fetchButtonPressed(int flags)
     {
-        if(filter_btn_fetch.isEnabled())
+        if(filter_btn_newSearch.isEnabled())
         {
             //Executes the Query in a new thread
-            QueryThread qt = new QueryThread(getFilters());
+            QueryThread qt = new QueryThread(getFilters(), flags);
             Thread thread = new Thread(qt);
 
             thread.start();
@@ -1615,13 +1634,15 @@ public class MainApplicationWindow {
     
     synchronized private static void disableButtons()
     {
-        filter_btn_fetch.setEnabled(false);
+        filter_btn_newSearch.setEnabled(false);
+        filter_btn_additiveSearch.setEnabled(false);
         filter_btn_clear.setEnabled(false);
         rt_btn_export.setEnabled(false);
         btnCustomExport.setEnabled(false);
         btnSimpleExport.setEnabled(false);
         
-        filter_btn_fetch.update();
+        filter_btn_newSearch.update();
+        filter_btn_additiveSearch.update();
         rt_btn_export.update();
         filter_btn_clear.update();
         btnCustomExport.update();
@@ -1633,18 +1654,22 @@ public class MainApplicationWindow {
         
         if(curState == AppState.IDLE || curState == AppState.FINISHED)
         {
-            filter_btn_fetch.setEnabled(true);
+            filter_btn_newSearch.setEnabled(true);
         }
         
         if(curState == AppState.FINISHED)
         {
+            if(numResults > 0)
+                filter_btn_additiveSearch.setEnabled(true);
+            
             rt_btn_export.setEnabled(true);
             btnCustomExport.setEnabled(true);
             btnSimpleExport.setEnabled(true);
         }
         
         
-        filter_btn_fetch.update();
+        filter_btn_newSearch.update();
+        filter_btn_additiveSearch.update();
         filter_btn_clear.update();
         rt_btn_export.update();
         btnCustomExport.update();
@@ -1766,7 +1791,7 @@ public class MainApplicationWindow {
         resultList.removeAll();
         
         if(results != null && results.size() > 0) {
-            for(Card curCard : results)
+            for(Card curCard : results.values())
             {
                 resultList.add(curCard.getName());
             }
@@ -1857,14 +1882,15 @@ public class MainApplicationWindow {
                 filter_lbl_thinkTime.setVisible(true);
                 filter_lbl_progressBar.setVisible(true);
                 
-                filter_btn_fetch.setVisible(false);
+                filter_btn_newSearch.setVisible(false);
+                filter_btn_additiveSearch.setVisible(false);
                 filter_btn_clear.setVisible(false);
                 filter_lbl_header_note1.setVisible(false);
                 
-                filter_btn_fetch.update();
+                filter_btn_newSearch.update();
+                filter_btn_additiveSearch.update();
                 filter_btn_clear.update();
                 filter_lbl_header_note1.update();
-                
                 
                 filter_lbl_thinkTime.update();
                 filter_lbl_progressBar.update();
@@ -1872,7 +1898,6 @@ public class MainApplicationWindow {
                 timer.schedule(new UpdateTimerTask(), 1000l, 1000l);  // Run once a second 
             }
         });
-        
     }
     
     synchronized public static void asyncUpdateTimer()
@@ -1903,11 +1928,13 @@ public class MainApplicationWindow {
                 filter_lbl_thinkTime.update();
                 filter_lbl_progressBar.update();
                 
-                filter_btn_fetch.setVisible(true);
+                filter_btn_newSearch.setVisible(true);
+                filter_btn_additiveSearch.setVisible(true);
                 filter_btn_clear.setVisible(true);
                 filter_lbl_header_note1.setVisible(true);
                 
-                filter_btn_fetch.update();
+                filter_btn_newSearch.update();
+                filter_btn_additiveSearch.update();
                 filter_btn_clear.update();
                 filter_lbl_header_note1.update();
             }
@@ -1917,5 +1944,13 @@ public class MainApplicationWindow {
     synchronized public static void setNumResults(int resultCount)
     {
         numResults = resultCount;
+    }
+    
+    public static void addCardAdditive(Card card)
+    {
+        if(results.get(card.getMultiverseid()) == null)
+        {
+            results.put(card.getMultiverseid(), card);
+        }
     }
 }

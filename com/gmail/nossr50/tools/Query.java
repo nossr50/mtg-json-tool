@@ -43,37 +43,85 @@ public class Query {
         
         if(filters.size() == 0)
         {
+            MainApplicationWindow.asyncToggleWarning(true);
+            
             //Do a query for all cards
             ArrayList<Card> cards = (ArrayList<Card>) CardAPI.getAllCards();
-            MainApplicationWindow.setNumResults(cards.size());
             return cards;
         }
-
-        System.out.println("[DEBUG] Executing a query ");
-        System.out.println("[DEBUG] -- FILTERS [BEG] -- ");
+        
+        //If the search is across multiple sets...
+        ArrayList<String> sets = new ArrayList<String>();
         
         for (String s : filters) {
-            curFilters.add(s);
-            System.out.println(s);
+            if(s.contains("setName"))
+            {
+                String isolatedString = s.substring(8); //Isolate the set names
+                String trimmedString = isolatedString.replaceAll(",+",""); //Remove commas
+                String[] splitString = trimmedString.split(" "); //Split by spaces
+                
+                //Add all splits to sets
+                for(String subString : splitString)
+                {
+                    System.out.println(subString);
+                    sets.add("setName="+subString); //Add the filter
+                }
+            }  
         }
         
-        //Warn them if they are doing what we consider a "generic" query
-        if(curFilters.size() <= 1 && isGenericQuery(curFilters))
+        ArrayList<Card> cards = new ArrayList<Card>();
+        
+        if(sets.size() > 1)
         {
-            MainApplicationWindow.asyncToggleWarning(true);
+            for (String s : filters) {
+                //Ignore the set filters
+                if(!s.contains("setName"))
+                    curFilters.add(s);
+                //System.out.println(s);
+            }
+            
+            
+            
+            for(String s : sets)
+            {
+                ArrayList<String> setFilters = new ArrayList<String>();
+                
+                setFilters.add(s);
+                setFilters.addAll(curFilters);
+                
+                //Warn them if they are doing what we consider a "generic" query
+                if(setFilters.size() <= 1 && isGenericQuery(setFilters))
+                {
+                    MainApplicationWindow.asyncToggleWarning(true);
+                }
+                
+                ArrayList<Card> curResults = (ArrayList<Card>) CardAPI.getAllCards(setFilters);
+                
+                if(curResults != null && !curResults.isEmpty())
+                    cards.addAll(curResults);
+            }
+            
+        } else {
+            for (String s : filters) {
+                curFilters.add(s);
+            }
+            
+            //Warn them if they are doing what we consider a "generic" query
+            if(curFilters.size() <= 1 && isGenericQuery(curFilters))
+            {
+                MainApplicationWindow.asyncToggleWarning(true);
+            }
+            
+            ArrayList<Card> curResults = (ArrayList<Card>) CardAPI.getAllCards(curFilters);
+            
+            if(curResults != null && !curResults.isEmpty())
+                cards.addAll(curResults);
         }
         
-        System.out.println("[DEBUG] -- FILTERS [END] -- ");
-        
-        System.out.println("[DEBUG] Executing a query with the following filters: ");
-
-        ArrayList<Card> cards = (ArrayList<Card>) CardAPI.getAllCards(curFilters);
-
         if (cards == null || cards.isEmpty()) {
             System.out.println("No results for current filters!");
             return null;
         } else {
-            MainApplicationWindow.setNumResults(cards.size());
             return cards;
         }
     }

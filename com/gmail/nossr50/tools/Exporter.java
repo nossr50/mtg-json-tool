@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import java.util.Date;
 
 import com.gmail.nossr50.enums.ExportType;
-import com.gmail.nossr50.enums.StyleFlags;
-import com.gmail.nossr50.enums.ExportFlags;
+import com.gmail.nossr50.flags.ExportFlags;
+import com.gmail.nossr50.flags.StyleFlags;
 
 import io.magicthegathering.javasdk.resource.Card;
 import io.magicthegathering.javasdk.resource.Legality;

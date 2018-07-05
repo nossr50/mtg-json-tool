@@ -1,3 +1,11 @@
+v0.00.07
+
+- Fixed a crash that happened if a card had no legalities in the DB
+- Added warning for doing a broad search when no filters are set
+- Added an additive search (Adding to existing results)
+- Searches now support searching across multiple sets in the filters (program would hang indefinitely before)
+
+==========
 v0.00.06
 
 - Added new (optional) simplified view to shorten export logs and make them more readable

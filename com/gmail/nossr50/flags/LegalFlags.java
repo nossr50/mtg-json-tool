@@ -1,4 +1,4 @@
-package com.gmail.nossr50.datatypes;
+package com.gmail.nossr50.flags;
 
 public class LegalFlags {
     public static final int NOFLAGS                     = 0;

@@ -1,4 +1,4 @@
-package com.gmail.nossr50.enums;
+package com.gmail.nossr50.flags;
 
 public class ExportFlags {
     public static final int NOFLAGS         = 0;   // In binary: 00000

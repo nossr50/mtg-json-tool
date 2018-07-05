@@ -1,4 +1,4 @@
-package com.gmail.nossr50.enums;
+package com.gmail.nossr50.flags;
 
 public class StyleFlags {
     public static final int NOFLAGS                     = 0;

@@ -1,6 +1,6 @@
 package com.gmail.nossr50.enums;
 
-import com.gmail.nossr50.datatypes.*;
+import com.gmail.nossr50.flags.*;
 
 public enum LegalTypes {
     MODERN("Modern", LegalFlags.MODERN, LegalFlags.MISS_MODERN),
