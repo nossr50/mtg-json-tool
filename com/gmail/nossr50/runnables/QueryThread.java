@@ -2,8 +2,6 @@ package com.gmail.nossr50.runnables;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-
 import com.gmail.nossr50.MainApplicationWindow;
 import com.gmail.nossr50.enums.AppState;
 import com.gmail.nossr50.flags.QueryFlags;
@@ -39,28 +37,22 @@ public class QueryThread implements Runnable {
     
     private void initSearch()
     {
-        List<Card> newResults = Query.initQuery(curFilters);
+        ArrayList<Card> newResults = Query.initQuery(curFilters);
+        
+        System.out.println("SIZE: "+ newResults.size());
         if(newResults != null && newResults.size() > 0)
         {
             if(QueryFlags.isEnabled(curFlags, QueryFlags.CLEAR_SEARCH))
             {
                 //Reset old search results
-                MainApplicationWindow.results = new HashMap<Integer, Card>();
-                
-                for(Card c : newResults)
-                {
-                    MainApplicationWindow.results.put(c.getMultiverseid(), c);
-                }
-            } else if(QueryFlags.isEnabled(curFlags, QueryFlags.ADDITIVE_SEARCH))
-            {
-                
-                for(Card c : newResults)
-                {
-                    MainApplicationWindow.addCardAdditive(c);
-                }
+                MainApplicationWindow.results = new ArrayList<Card>();
+                MainApplicationWindow.resultTracker = new HashMap<String, Card>();
             }
+            
+            ArrayList<Card> sorted = MainApplicationWindow.sortResults(newResults);
+            
+            MainApplicationWindow.addUniqueCards(sorted);
         }
-        
     }
 
 }

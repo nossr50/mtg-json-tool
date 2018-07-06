@@ -57,7 +57,7 @@ public class MainApplicationWindow {
     private CardImageManager cardImageManager;
     
     private String appName  = "MTG JSON Tool";
-    private String ver      = "v0.00.07";
+    private String ver      = "v0.00.08";
     private String author   = "nossr50";
     
     public static int secondsPassed     = 0;
@@ -72,6 +72,13 @@ public class MainApplicationWindow {
     public static HashMap<Integer, Integer> legalityTracker;
     
     public static ExportExample exportExample;
+    
+    /*
+     * Other vars
+     */
+    public static ArrayList<Card> results;
+    public static HashMap<String, Card> resultTracker;
+    public static AppState curState = AppState.IDLE;
     
     /*
      * Tabs
@@ -202,11 +209,7 @@ public class MainApplicationWindow {
     private Listener listener_drop_rarity_set;
     
     
-    /*
-     * Other vars
-     */
-    public static HashMap<Integer, Card> results;
-    public static AppState curState = AppState.IDLE;
+
     
     /*
      * Combos (Drop Down Menus)
@@ -242,6 +245,8 @@ public class MainApplicationWindow {
     private Label result_lbl_manaCost;
     private Label lblStats_1;
     private Button btnSimplifiedStats;
+    private Label result_lbl_ID;
+    private Text rt_ID;
 
     
 
@@ -826,6 +831,13 @@ public class MainApplicationWindow {
         result_lbl_manaCost.setText("Mana Cost");
         result_lbl_manaCost.setBounds(316, 522, 66, 15);
         
+        result_lbl_ID = new Label(resultComp, SWT.NONE);
+        result_lbl_ID.setText("ID");
+        result_lbl_ID.setBounds(316, 626, 66, 15);
+        
+        rt_ID = new Text(resultComp, SWT.BORDER);
+        rt_ID.setBounds(388, 623, 250, 21);
+        
         tbtmAdvancedExport = new TabItem(tabFolder, SWT.NONE);
         tbtmAdvancedExport.setText("Advanced Export");
         
@@ -1214,10 +1226,14 @@ public class MainApplicationWindow {
     
     synchronized private void updateResultFields(int selectionIndex)
     {
-        Card curCard = (Card) results.values().toArray()[selectionIndex];
+        Card curCard = results.get(selectionIndex);
+        
+        System.out.println(curCard.getId());
         
         if(curCard != null)
         {
+            updateResultField(rt_ID, curCard.getId());
+            
             //Legalities
             updateLegalities(curCard.getMultiverseid());
             
@@ -1304,14 +1320,14 @@ public class MainApplicationWindow {
         
         System.out.println("Updating Legalities...");
         
-        for(Card curCard : results.values())
+        for(Card curCard : results)
         {
             //To keep track of whether or not we've found legality for this card
             HashMap<LegalTypes, Boolean> legalityMap = new HashMap<LegalTypes, Boolean>();
             
             for(LegalTypes lt : LegalTypes.values()) {
                 legalityMap.put(lt, false);
-                System.out.println(lt.toString() +" : "+legalityMap.get(lt));
+                //System.out.println(lt.toString() +" : "+legalityMap.get(lt));
             }
             
             int legality = 0;
@@ -1473,7 +1489,7 @@ public class MainApplicationWindow {
         if(rt_btn_export.isEnabled())
         {
             //Executes the Export script in a new thread
-            ExportThread et = new ExportThread((ArrayList<Card>) results.values(), ExportType.SIMPLE, ExportFlags.NAMES, StyleFlags.NOFLAGS);
+            ExportThread et = new ExportThread( results, ExportType.SIMPLE, ExportFlags.NAMES, StyleFlags.NOFLAGS);
             Thread thread = new Thread(et);
 
             thread.start();
@@ -1485,7 +1501,7 @@ public class MainApplicationWindow {
         if(rt_btn_export.isEnabled())
         {
             //Executes the Export script in a new thread
-            ExportThread et = new ExportThread((ArrayList<Card>) results.values(), ExportType.STANDARD, ExportFlags.NOFLAGS, StyleFlags.NOFLAGS);
+            ExportThread et = new ExportThread(results, ExportType.STANDARD, ExportFlags.NOFLAGS, StyleFlags.NOFLAGS);
             Thread thread = new Thread(et);
 
             thread.start();
@@ -1497,7 +1513,7 @@ public class MainApplicationWindow {
         if(btnCustomExport.isEnabled())
         {
             //Executes the Export script in a new thread with custom flags
-            ExportThread et = new ExportThread((ArrayList<Card>) results.values(), ExportType.CUSTOM, getExportFlags(), getStyleFlags());
+            ExportThread et = new ExportThread(results, ExportType.CUSTOM, getExportFlags(), getStyleFlags());
             Thread thread = new Thread(et);
 
             thread.start();
@@ -1791,7 +1807,7 @@ public class MainApplicationWindow {
         resultList.removeAll();
         
         if(results != null && results.size() > 0) {
-            for(Card curCard : results.values())
+            for(Card curCard : results)
             {
                 resultList.add(curCard.getName());
             }
@@ -1946,11 +1962,29 @@ public class MainApplicationWindow {
         numResults = resultCount;
     }
     
-    public static void addCardAdditive(Card card)
+    public static void addUniqueCards(ArrayList<Card> newCards)
     {
-        if(results.get(card.getMultiverseid()) == null)
+        
+        for(Card curCard : newCards)
         {
-            results.put(card.getMultiverseid(), card);
+            if(resultTracker.get(curCard.getId()) == null)
+                resultTracker.put(curCard.getId(), curCard);
         }
+        
+        //Add all cards to array
+        ArrayList<Card> unsortedCards = new ArrayList<Card>();
+        unsortedCards.addAll(resultTracker.values());
+   
+        //Finally sort cards and set as current results array
+        results = sortResults(unsortedCards);
+    }
+    
+    public static ArrayList<Card> sortResults(ArrayList<Card> unsortedCards)
+    {
+        ArrayList<Card> copyOfCardMap = unsortedCards;
+        
+        copyOfCardMap.sort((object1, object2) -> object1. getName().compareTo(object2. getName()));
+        
+        return copyOfCardMap;
     }
 }

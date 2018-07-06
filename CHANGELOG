@@ -1,3 +1,11 @@
+v0.00.08
+
+- Fixed critical bug with sets that happened to have spaces in their name
+- Added alphabetical sorting to results page
+- Removed duplicate cards from query results
+- Example cards used for the Advanced Export custom preview are now hardcoded and offline instead of being from an online query
+
+==========
 v0.00.07
 
 - Fixed a crash that happened if a card had no legalities in the DB

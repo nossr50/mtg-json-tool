@@ -1,8 +1,6 @@
 package com.gmail.nossr50.tools;
 
 import java.util.ArrayList;
-import java.util.List;
-
 import com.gmail.nossr50.MainApplicationWindow;
 
 import io.magicthegathering.javasdk.api.CardAPI;
@@ -20,9 +18,9 @@ public class Query {
      * @param curFilters The filters for the query
      * @return The cards matching the query
      */
-    public static List<Card> initQuery(ArrayList<String> curFilters) {
+    public static ArrayList<Card> initQuery(ArrayList<String> curFilters) {
         
-        List<Card> queryResults = getCards(curFilters);
+        ArrayList<Card> queryResults = getCards(curFilters);
 
         if (queryResults == null || queryResults.isEmpty()) {
             System.out.println("[WARNING] No results found for query!");
@@ -54,18 +52,22 @@ public class Query {
         ArrayList<String> sets = new ArrayList<String>();
         
         for (String s : filters) {
-            if(s.contains("setName"))
+            if(s.contains("setName") && s.contains(","))
             {
                 String isolatedString = s.substring(8); //Isolate the set names
-                String trimmedString = isolatedString.replaceAll(",+",""); //Remove commas
-                String[] splitString = trimmedString.split(" "); //Split by spaces
-                
-                //Add all splits to sets
-                for(String subString : splitString)
-                {
-                    System.out.println(subString);
-                    sets.add("setName="+subString); //Add the filter
+                String[] splitCommasString = isolatedString.split(","); //Split by spaces
+                for(String subSplit : splitCommasString) {
+                    
+                    if(subSplit.startsWith(" "))
+                    {
+                        subSplit = subSplit.substring(1);
+                    }
+                    
+                    //Add all splits to sets
+                    System.out.println(subSplit);
+                    sets.add("setName="+subSplit); //Add the filter
                 }
+                
             }  
         }
         
@@ -80,10 +82,9 @@ public class Query {
                 //System.out.println(s);
             }
             
-            
-            
             for(String s : sets)
             {
+                System.out.println("Issuing Set query");
                 ArrayList<String> setFilters = new ArrayList<String>();
                 
                 setFilters.add(s);
