@@ -4,6 +4,7 @@ v0.00.08
 - Added alphabetical sorting to results page
 - Removed duplicate cards from query results
 - Example cards used for the Advanced Export custom preview are now hardcoded and offline instead of being from an online query
+- Improved formatting for Rulings on the results page
 
 ==========
 v0.00.07

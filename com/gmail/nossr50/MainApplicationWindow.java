@@ -1435,10 +1435,10 @@ public class MainApplicationWindow {
         {
             String curString = rulings[a].getText();
             
-            for(int x = 0; x < curString.length(); x++)
-            {
-                newString+=curString.toCharArray()[x];
-            }
+            if(a+1 >= rulings.length)
+                newString+=curString;
+            else
+                newString+=curString+"\n"+"\n";
         }
         
         resultField.setText(newString);
